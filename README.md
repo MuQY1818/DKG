@@ -39,14 +39,6 @@ graph TD
     C -- "提供API" --> E;
     C -- "提供API" --> F;
     C -- "提供API" --> G;
-
-    style A fill:#f9f9f9,stroke:#333,stroke-width:2px
-    style B fill:#e6f7ff,stroke:#333,stroke-width:2px
-    style C fill:#d4edda,stroke:#333,stroke-width:2px
-    style D fill:#fffbe6,stroke:#333,stroke-width:2px
-    style E fill:#f8d7da,stroke:#333,stroke-width:2px
-    style F fill:#f8d7da,stroke:#333,stroke-width:2px
-    style G fill:#f8d7da,stroke:#333,stroke-width:2px
 ```
 
 ## ✨ Core Features / 核心功能

@@ -1,4 +1,4 @@
-# DKG 项目技术详解 (v2.0)
+# DKG 项目技术详解
 
 本文档提供对DKG项目的深度技术剖析，包括其核心架构、数据模型、关键算法及其数学实现。
 
@@ -112,17 +112,17 @@
 
 #### 3.1.1 初始掌握度计算
 在创建 `master` 关系时，学生的初始掌握度 \(M_{initial}\) 是根据其在相关历史题目上的平均表现计算的：
-\[
+$$
 M_{initial}(s, k) = \frac{\sum_{p \in P_k} C(s, p)}{|P_k|}
-\]
+$$
 其中，\(s\) 是学生，\(k\) 是技能，\(P_k\) 是学生 \(s\) 已作答的、考察技能 \(k\) 的题目集合，\(C(s, p)\) 是学生在题目 \(p\) 上的作答结果（1为正确，0为错误）。如果 \(|P_k|=0\)，则初始值默认为0.5。
 
 #### 3.1.2 技能相似度计算
 技能间的 `similar` 关系是通过计算其向量表示的余弦相似度得出的。首先，根据Q矩阵（problem-skill matrix）为每个技能 \(k\) 构建一个向量 \(\vec{v_k}\)，该向量的维度等于总题目数，如果题目 \(p\) 考察技能 \(k\)，则向量的第 \(p\) 个分量为1，否则为0。
 技能 \(k_i\) 和 \(k_j\) 的相似度 \(\text{sim}(k_i, k_j)\) 计算如下：
-\[
+$$
 \text{sim}(k_i, k_j) = \frac{\vec{v_{k_i}} \cdot \vec{v_{k_j}}}{||\vec{v_{k_i}}|| \cdot ||\vec{v_{k_j}}||}
-\]
+$$
 
 ### 3.2 动态交互更新 (`record_interaction`)
 
@@ -135,19 +135,19 @@ M_{initial}(s, k) = \frac{\sum_{p \in P_k} C(s, p)}{|P_k|}
 `mastery_score` 的更新采用**带遗忘因子的移动平均法**，以更好地反映学生当前的状态，而非遥远的历史。
 首先，更新交互历史 \(H_{new}(s, k) = H_{old}(s, k) \cup \{c_t\}\)。
 然后，取最近的 \(N\) 次历史记录（\(N\) 为窗口大小，例如10），计算其均值：
-\[
+$$
 M_{t}(s, k) = \frac{1}{N} \sum_{i=t-N+1}^{t} c_i
-\]
+$$
 这个值将成为新的 `mastery_score`。这种方法使得近期的表现比远期的表现有更大的影响力。
 
 #### 3.2.3 知识强化传播 (`_propagate_reinforcement`)
 当一个技能 \(k_{primary}\) 的掌握度发生变化 \(\Delta M\) 时，该变化会以一定衰减 \(\delta\) (例如, `decay_factor=0.4`) 传播到其相邻的技能（前置或相似技能 \(k_{related}\)）上，实现"举一反三"的效果。
-\[
+$$
 \Delta M_{propagated} = \Delta M_{primary} \times \delta \times w_{relation}
-\]
-\[
+$$
+$$
 M_{new}(s, k_{related}) = \text{clip}(M_{old}(s, k_{related}) + \Delta M_{propagated}, 0, 1)
-\]
+$$
 其中 \(w_{relation}\) 是关系权重（如 `similarity` 或 `confidence`）。
 
 ### 3.3 问题推荐 (`recommend_next_problems`)
@@ -156,25 +156,25 @@ M_{new}(s, k_{related}) = \text{clip}(M_{old}(s, k_{related}) + \Delta M_{propag
 
 #### 3.3.1 题目适合度 (`suitability`) 计算
 对每个候选题目 \(p\)，系统会计算一个适合度分数 \(S(s, p)\)，该分数由三个部分加权组成：
-\[
+$$
 S(s, p) = w_{knowledge} \cdot F_{knowledge} + w_{zpd} \cdot F_{zpd} + B_{novelty}
-\]
+$$
 -   **知识匹配度 \(F_{knowledge}\)**: 衡量题目是否针对学生的薄弱点。
-    \[
+    $$
     F_{knowledge} = 1 - M(s, k_p)
-    \]
+    $$
     其中 \(M(s, k_p)\) 是学生对该题目所考察技能的掌握度。掌握度越低，匹配度越高。
 
 -   **难度匹配度 \(F_{zpd}\)**: 基于维果茨基的"最近发展区"理论，认为最合适的题目其难度应略高于学生当前水平。这通过一个高斯函数来实现：
-    \[
+    $$
     F_{zpd} = e^{-\frac{(D_p - M(s, k_p) - \mu)^2}{2\sigma^2}}
-    \]
+    $$
     其中 \(D_p\) 是题目难度，\(\mu\) 是最佳难度差（例如0.15），\(\sigma\) 是容忍范围。当 \(D_p - M(s, k_p)\) 约等于 \(\mu\) 时，该项得分最高。
 
 -   **新颖度奖励 \(B_{novelty}\)**: 如果题目考察了学生从未接触过的新技能，则给与一个基于其 `curiosity` 属性的奖励分，鼓励探索。
-    \[
+    $$
     B_{novelty} = \begin{cases} \text{curiosity}_s & \text{if } p \text{ is novel} \\ 0 & \text{otherwise} \end{cases}
-    \]
+    $$
 
 最后，系统会选择 \(S(s, p)\) 分数最高的题目进行推荐。
 
