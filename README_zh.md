@@ -90,4 +90,6 @@ python run_api_example.py
 
 ## 📊 数据集
 
-系统当前主要使用 **ASSISTments 2009-2010 Skill Builder** 数据集，该数据集包含了丰富的真实学生解题活动日志。 
+系统当前主要使用 **ASSISTments 2009-2010 Skill Builder** 数据集，该数据集包含了丰富的真实学生解题活动日志。
+
+**注意：** 由于文件大小的原因，本仓库未包含 `skill_builder_data09-10.csv` 数据集。在运行示例脚本之前，您需要自行下载该文件，并将其放置在 `dataset/` 目录下。
