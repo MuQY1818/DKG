@@ -40,11 +40,11 @@ class DKGBuilder:
         self._infer_skill_prerequisites(data)
         self._compute_skill_similarities(data)
         
-        # 4. 添加图谱元信息
+        # 4. 添加图谱元信息 (从图中直接统计)
         self.graph.graph['dataset_name'] = data.get('dataset_name', 'Unknown')
-        self.graph.graph['num_students'] = data.get('num_students', 0)
-        self.graph.graph['num_problems'] = data.get('num_problems', 0) 
-        self.graph.graph['num_skills'] = data.get('num_skills', 0)
+        self.graph.graph['num_students'] = len([n for n, d in self.graph.nodes(data=True) if d.get('type') == 'student'])
+        self.graph.graph['num_problems'] = len([n for n, d in self.graph.nodes(data=True) if d.get('type') == 'problem'])
+        self.graph.graph['num_skills'] = len([n for n, d in self.graph.nodes(data=True) if d.get('type') == 'skill'])
         
         return self.graph
     
@@ -111,13 +111,17 @@ class DKGBuilder:
 
     def _create_nodes(self, data: Dict):
         """创建图谱节点"""
+        interactions = data.get('interactions')
+        if interactions is None:
+            return
+
         # 创建学生节点
-        num_students = data.get('num_students', 0)
-        for student_id in range(num_students):
+        student_ids = interactions['student_id'].unique()
+        for student_id in student_ids:
             self.graph.add_node(
                 f"student_{student_id}",
                 type='student',
-                student_id=student_id,
+                student_id=int(student_id),
                 # 引入学生的"个性"参数
                 learning_rate=np.random.normal(1.0, 0.1), # 学习效率
                 perseverance=np.random.randint(3, 7), # 毅力：连续失败多少次会沮丧
@@ -128,10 +132,10 @@ class DKGBuilder:
             )
         
         # 创建题目节点
-        num_problems = data.get('num_problems', 0)
+        problem_ids = interactions['problem_id'].unique()
         problem_desc = data.get('problem_descriptions')
         
-        for problem_id in range(num_problems):
+        for problem_id in problem_ids:
             problem_type = 'objective'  # 默认值
             max_score = 1.0  # 默认值
             
@@ -144,7 +148,7 @@ class DKGBuilder:
             self.graph.add_node(
                 f"problem_{problem_id}",
                 type='problem',
-                problem_id=problem_id,
+                problem_id=int(problem_id),
                 problem_type=problem_type,
                 max_score=max_score,
                 difficulty=0.5,  # 后续计算
