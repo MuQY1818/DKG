@@ -254,13 +254,38 @@ $$
 
 </details>
 
-## 4. 未来工作与前瞻：基于图神经网络（GNN）的性能预测
+## 4. 模块功能拆解
+
+*   **`dkg_mvp/data_loader.py`**:
+    *   **职责**: 数据加载与预处理。
+    *   **核心函数**: `load_assistments_log_data`, `load_math2015_data`。
+    *   **输出**: 标准化的数据字典，包含`interactions` (DataFrame), `q_matrix` (numpy array), `skill_names`等。
+
+*   **`dkg_mvp/dkg_builder.py`**:
+    *   **职责**: DKG的构建、更新、查询和推荐。是整个系统的核心引擎。
+    *   **核心类**: `DKGBuilder`。
+    *   **核心方法**:
+        *   `build_from_data`: 从数据字典静态构建初始图谱。
+        *   `record_interaction`: 接收新的交互，动态更新图谱。
+        *   `get_student_profile`: 获取学生画像。
+        *   `recommend_next_problems`: 根据ZPD理论推荐问题。
+        *   `generate_llm_prompt`: 生成用于驱动大语言模型的提示。
+
+*   **`dkg_mvp/gnn_trainer.py`**:
+    *   **职责**: 训练图神经网络模型，用于性能预测。
+    *   **核心流程**: 将DKG转换为PyG的`HeteroData`格式，定义GNN Encoder和Link Predictor Decoder，进行端到端的训练与评估。
+    *   **定位**: 作为项目的下一代技术探索，验证数据驱动方法的可行性。
+
+*   **`run_api_example.py`**:
+    *   **职责**: 作为API的使用示例，展示如何调用`DKGBuilder`的核心功能来模拟一个完整的"诊断-学习-再诊断"的流程。
+
+## 5. 未来工作与前瞻：基于图神经网络（GNN）的性能预测
 
 当前DKG模型依赖于显式定义的规则（如ZPD、知识巩固传播）进行更新和推荐。虽然这提供了很好的可解释性，但模型捕捉复杂、高阶特征的能力有限。引入图神经网络（GNN）旨在通过端到端的学习，自动从图结构中学习学生、题目和技能的向量表征（Embeddings），从而实现更精确的学生表现预测。
 
 我们已经通过 `dkg_mvp/gnn_trainer.py` 脚本完成了一个原型验证。该实现基于 **PyTorch Geometric (PyG)** 框架，探索了利用GNN进行链路预测的可行性。
 
-### 4.1 核心流程
+### 5.1 核心流程
 
 1.  **异构图转换**: 将 `dkg_builder` 生成的 `networkx` 图谱转换为 PyG 的 `HeteroData` 对象。该对象能清晰地表示不同类型的节点（`student`, `problem`, `skill`）和边（`solve`, `require`, 以及它们的反向边）。
 
@@ -274,7 +299,7 @@ $$
     *   **损失函数**: 使用 `BCEWithLogitsLoss`，适用于二分类任务（预测交互的 `correct` 标签，即成功或失败）。
     *   **评估指标**: 使用 `AUC` (Area Under Curve) 和 `F1-Score` 来评估模型在验证集和测试集上的预测性能。
 
-### 4.2 成果与展望
+### 5.2 成果与展望
 
 *   **初步结果**: 实验证明，该GNN模型在测试集上取得了 `AUC: 0.707` 和 `F1-Score: 0.808` 的基准性能，验证了此方法的有效性。
 *   **应用价值**: 训练好的GNN模型产出的**节点表征 (Node Embeddings)** 具有极高的价值。这些表征可以替代或补充DKG中手工设计的特征（如 `mastery_score`），用于：
@@ -282,34 +307,6 @@ $$
     2.  **学生聚类**: 发现具有相似知识结构或学习行为的学生群体。
     3.  **知识结构分析**: 分析技能和题目的表征，发现隐含的知识结构关系。
 *   **演进路径**: 这为项目从一个**可解释的规则引擎**演进为一个**数据驱动的智能预测与推荐系统**提供了清晰的技术路径。
-
-## 4. 模块功能拆解
-
-除了核心的 `dkg_builder.py`，`dkg_mvp` 目录下还包含以下辅助模块：
-
--   **`data_loader.py`**:
-    -   **功能**: 数据的入口。负责从不同的数据源（如Assistments, Math2015等）加载原始数据。
-    -   **职责**: 执行数据清洗、缺失值处理、ID到索引的映射、数据结构统一化等预处理任务，为 `DKGBuilder` 提供格式标准的输入。
-
--   **`api_tests.py`**:
-    -   **功能**: 单元测试和API验证。
-    -   **职责**: 包含一系列针对 `DKGBuilder` 各个公开API的测试用例，确保图谱的构建、更新、查询、推荐等功能符合预期，是保证代码质量和稳定性的关键。
-
--   **`simulation.py`**:
-    -   **功能**: 学习过程模拟器。
-    -   **职责**: 提供一个可以模拟学生学习行为的引擎。可以用于在没有真实数据流的情况下，测试DKG的动态更新和推荐逻辑是否闭环，也可用于进行算法效果的对比实验。
-
--   **`visualization.py` & `interactive_visualization.py`**:
-    -   **功能**: 可视化工具。
-    -   **职责**: `visualization.py` 提供静态的图谱可视化方法（如将整个图或其子图绘制成图片）。`interactive_visualization.py` 则利用 `pyvis` 等库，生成可交互的HTML文件，允许用户在浏览器中缩放、拖动、点击节点来探索图谱结构。
-
--   **`convert_data.py` & `examples.py`**:
-    -   **功能**: 工具和示例脚本。
-    -   **职责**: `convert_data.py` 可能包含一些一次性的数据格式转换脚本。`examples.py` 则可能提供了一些更具体的、针对特定功能点的API使用范例。
-
--   **`requirements.txt`**:
-    -   **功能**: 项目依赖列表。
-    -   **职责**: 列出了运行本项目所需的所有Python第三方库及其版本，方便一键安装。
 
 ## 4. 附录
 
