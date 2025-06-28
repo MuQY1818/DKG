@@ -90,4 +90,5 @@ For detailed documentation, please choose your preferred language:
 
 - **[English](./README_en.md)**
 - **[简体中文](./README_zh.md)**
+- **[Technical Documentation (English)](./TECHNICAL_DOCUMENTATION_en.md)**
 - **[技术文档 (中文)](./TECHNICAL_DOCUMENTATION.md)** 
