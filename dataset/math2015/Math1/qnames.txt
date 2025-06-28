@@ -1,0 +1,26 @@
+No.	Skill Names
+1	Set,
+2	Inequality,
+3	Trigonometric function,
+4	Logarithm versus exponential,
+5	Plane vector,
+6	Property of function,
+7	Image of function,
+8	Spatial imagination,
+9	Abstract summarization,
+10	Reasoning and demonstration,
+11	Calculation.
+
+
+编号    技能名称
+1    集合，
+2    不等式，
+3    三角函数，
+4    对数与指数，
+5    平面向量，
+6    函数性质，
+7    函数像，
+8    空间想象力，
+9    抽象概括，
+10    推理与证明，
+11    计算。
