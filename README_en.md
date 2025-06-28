@@ -90,4 +90,4 @@ All core functionalities are exposed through the `dkg_mvp.dkg_builder.DKGBuilder
 
 The system currently primarily uses the **ASSISTments 2009-2010 Skill Builder** dataset, which contains rich log data of real student problem-solving activities.
 
-**Note:** Due to its size, the `skill_builder_data09-10.csv` dataset is not included in this repository. You will need to download it separately and place it in the `dataset/` directory before running the example script. 
+**Note:** Due to their size, the datasets (`skill_builder_data09-10.csv` and `assistments_2009_2010.csv`) are not included in this repository. You will need to download them separately and place them in the `dataset/` directory before running the example script. 
