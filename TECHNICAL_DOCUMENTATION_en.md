@@ -103,63 +103,72 @@ The `prerequisite` relationship is automatically discovered by analyzing the str
 
 3.  **Establish Relationship**: If $P(A|B)$ is significantly greater than $P(B|A)$ and $P(A|B)$ itself exceeds a high confidence threshold (e.g., 0.7), the system determines that A is a prerequisite for B and establishes a `prerequisite` edge from A to B. The `confidence` attribute of this edge is set to the value of $P(A|B)$.
 
-### 3.2 Dynamic Interaction Update (`record_interaction`)
+### 3.2 Dynamic Interaction Updates (`record_interaction`)
+When the system records a new learning interaction, it triggers a series of dynamic updates to reflect the changes in the student's cognitive state in real-time. This process is more than just updating a single data point; it simulates a complex cognitive evolution.
 
-This is the core dynamic process of the system.
+The core flow of this function is as follows:
+1.  **Update 'solve' Relationship**: It creates or updates the `solve` relationship between the student and problem nodes, recording details of the interaction such as score, attempts, timestamp, etc.
 
-#### 3.2.1 Knowledge State Update
-When a student $s$ has a new interaction with a problem $p$ with an outcome of $c_t$ (1 or 0), the system identifies all skills $\{k_1, k_2, ...\}$ required by that problem. For each of these skills $k_i$, the system updates the `master` relationship between the student and the skill.
+2.  **Update Directly Related Skill Mastery (`_update_skill_mastery`)**:
+    - The system identifies all skills directly required by the problem.
+    - For each skill, it adjusts the student's `mastery_level` based on the interaction outcome. The core update logic is as follows:
+      $$
+      \Delta M_{base} = \begin{cases} 0.1 \times \text{learning\_rate} & \text{if correct} \\ -0.02 & \text{if incorrect} \end{cases}
+      $$
+      $$
+      M_{new} = \text{clip}(M_{current} + \Delta M_{base} + \text{bonus}_{epiphany}, 0, 1)
+      $$
+      Here, `learning_rate` is a personalized student parameter, enabling differential modeling. The code also includes an `is_epiphany` interface, allowing for a significant non-linear increase in mastery under specific conditions.
 
-#### 3.2.2 Mastery Score (`mastery_score`) Calculation
-The `mastery_score` is updated using a **moving average method with a forgetting factor** to better reflect the student's current state rather than distant history.
-First, the interaction history is updated: $H_{new}(s, k) = H_{old}(s, k) \cup \{c_t\}$.
-Then, the mean of the most recent $N$ history records is calculated ($N$ is the window size, e.g., 10):
-$$
-M_{t}(s, k) = \frac{1}{N} \sum_{i=t-N+1}^{t} c_i
-$$
-This value becomes the new `mastery_score`. This method gives more weight to recent performance.
+3.  **Knowledge Reinforcement Propagation (`_propagate_reinforcement`)**: This is the most sophisticated part of the dynamic update.
+    - After a skill's mastery level is increased from the interaction, the system initiates a recursive reinforcement process.
+    - This process takes the **total change in mastery** ($\Delta M_{total} = \Delta M_{base} + \text{bonus}_{epiphany}$) and propagates it backward to all **direct prerequisite skills**, attenuated by a predefined `decay_factor`.
+      $$
+      \Delta M_{propagated} = \Delta M_{total} \times \text{decay\_factor}
+      $$
+      $$
+      M_{new\_prereq} = \text{clip}(M_{current\_prereq} + \Delta M_{propagated}, 0, 1)
+      $$
+    - This propagation continues recursively until there are no further underlying prerequisite skills.
+    - **Significance of this mechanism**: It perfectly simulates the "knowledge consolidation" phenomenon in pedagogy—that is, **practicing and applying advanced knowledge serves as an effective review and reinforcement of the relevant foundational knowledge**.
 
-#### 3.2.3 Knowledge Reinforcement Propagation (`_propagate_reinforcement`)
-When the mastery of a skill $k_{primary}$ changes by $\Delta M$, this change propagates with a certain decay $\delta$ (e.g., `decay_factor=0.4`) to its adjacent skills (prerequisite or similar skills $k_{related}$), simulating a "transfer of learning" effect.
-$$
-\Delta M_{propagated} = \Delta M_{primary} \times \delta \times w_{relation}
-$$
-$$
-M_{new}(s, k_{related}) = \text{clip}(M_{old}(s, k_{related}) + \Delta M_{propagated}, 0, 1)
-$$
-where $w_{relation}$ is the relationship weight (e.g., `similarity` or `confidence`).
+### 3.3 Recommendations and Diagnostics
 
-### 3.3 Problem Recommendation (`recommend_next_problems`)
+#### 3.3.1 Problem Recommendation (`recommend_next_problems`)
+The system's recommendation module is designed to plan an efficient and user-friendly learning path for students. The design of its core algorithm is not a simple random selection or difficulty ranking but is deeply integrated with the **"Zone of Proximal Development" (ZPD) theory** from educational psychology.
 
-The core of the recommendation algorithm is to find the "most suitable" next problem for a student.
+This theory states that the most effective learning occurs in the zone just beyond a student's current ability level but not so far as to be unattainable. The system implements this theory through the following steps:
 
-#### 3.3.1 Problem Suitability (`suitability`) Calculation
-For each candidate problem $p$, the system calculates a suitability score $S(s, p)$, which is a weighted sum of three components:
-$$
-S(s, p) = w_{knowledge} \cdot F_{knowledge} + w_{zpd} \cdot F_{zpd} + B_{novelty}
-$$
--   **Knowledge Fit $F_{knowledge}$**: Measures if the problem targets the student's weak points.
-    $$
-    F_{knowledge} = 1 - M(s, k_p)
-    $$
-    where $M(s, k_p)$ is the student's mastery of the skill tested by the problem. The lower the mastery, the higher the fit.
+1.  **Identify Weak Skills**: First, the system identifies skills for which the student's current `mastery_level` is below a certain threshold (e.g., 0.7), marking them as potential learning targets.
+2.  **Calculate Problem Suitability (`_calculate_problem_suitability`)**: For each candidate problem under a weak skill, the system calculates a "suitability" score. The core of this score is to find the optimal match between problem difficulty and the student's ability:
+    - **Ideal Difficulty Matching**: The system posits that the ideal problem `difficulty` should be slightly higher than the student's current `mastery_level` for that skill. This "slightly higher" zone is the student's ZPD.
+    - **Avoid Ineffective Practice**: If a student has already answered a problem correctly, its suitability score is significantly lowered to prevent redundant practice.
+3.  **Generate Recommendation List**: The system aggregates the suitability scores for all candidate problems and sorts them in descending order, ultimately producing a personalized recommendation list that both targets weak knowledge points and offers an appropriate level of challenge.
 
--   **Difficulty Fit $F_{zpd}$**: Based on Vygotsky's "Zone of Proximal Development" theory, the most suitable problem should be slightly more difficult than the student's current level. This is implemented using a Gaussian function:
-    $$
-    F_{zpd} = e^{-\frac{(D_p - M(s, k_p) - \mu)^2}{2\sigma^2}}
-    $$
-    where $D_p$ is the problem difficulty, $\mu$ is the optimal difficulty gap (e.g., 0.15), and $\sigma$ is the tolerance. The score is highest when $D_p - M(s, k_p)$ is close to $\mu$.
+#### 3.3.2 Prompt Generation for LLMs (`generate_llm_prompt`)
+This function serves as a bridge between the DKG and Large Language Models (LLMs), designed to leverage DKG's structured knowledge to empower LLMs for generating high-quality learning path plans. It does not directly output a learning plan but rather constructs a well-structured, information-rich **Prompt**.
 
--   **Novelty Bonus $B_{novelty}$**: If the problem tests a skill the student has never encountered, a bonus score based on their `curiosity` attribute is given to encourage exploration.
-    $$
-    B_{novelty} = \begin{cases} \text{curiosity}_s & \text{if } p \text{ is novel} \\ 0 & \text{otherwise} \end{cases}
-    $$
+This prompt "translates" the analytical results of the DKG into a context that LLMs can understand and utilize, in the following ways:
+1.  **Assigning Role and Task**: It explicitly instructs the LLM to act as an "AI Education Planning Expert".
+2.  **Providing Student Profile**:
+    - **Knowledge Strengths and Weaknesses**: It extracts the student's skills with the highest and lowest mastery levels, giving the LLM a clear picture of the student's current knowledge state.
+    - **Learning Goals**: It clearly informs the LLM of the learning objectives the student wishes to achieve.
+3.  **Injecting Core Rules**:
+    - **Prerequisite Constraints**: It provides all relevant `prerequisite` relationships extracted from the graph as hard constraints, ensuring the learning path generated by the LLM is logically sound and feasible.
 
-Finally, the system recommends the problems with the highest $S(s, p)$ scores.
-
----
+In this way, the DKG injects the most critical structured knowledge (student state, knowledge dependencies) into the LLM's reasoning process, significantly enhancing the accuracy and quality of the personalized, effective learning plans it generates.
 
 ## 4. Module Breakdown
 
 (This section remains unchanged from v1.0)
+
+## 4. Appendix
+
+### 4.1 Data Source Compatibility
+The `DKGBuilder` is designed with compatibility for various educational data formats in mind. During the `_create_solve_relations` phase of graph construction, the system can automatically detect and process the following three mainstream data types:
+- **Log-based Data**: Each row is a complete learning interaction record (e.g., the ASSISTments dataset).
+- **Binary Matrix**: A (student x problem) matrix of 0s and 1s, representing correctness (e.g., the FrcSub dataset).
+- **Continuous Score Matrix**: A (student x problem) matrix of floating-point numbers, representing score ratios (e.g., the Math1/Math2 datasets).
+
+This flexibility allows the tool to be conveniently applied to a broader range of educational scenarios.
 ... 
