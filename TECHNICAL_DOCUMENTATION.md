@@ -124,6 +124,19 @@ $$
 \text{sim}(k_i, k_j) = \frac{\vec{v_{k_i}} \cdot \vec{v_{k_j}}}{||\vec{v_{k_i}}|| \cdot ||\vec{v_{k_j}}||}
 $$
 
+#### 3.1.3 技能前置关系推断 (`_infer_skill_prerequisites`)
+`prerequisite` 关系是通过挖掘所有学生的学习序列来自动发现的。其核心思想是，如果在大多数情况下，学生们都是先掌握了技能A才掌握技能B，那么A很可能就是B的前置技能。
+
+1.  **提取成功学习序列**: 对每个学生，系统会找出其所有**首次答对**某个技能相关题目的记录，并按时间排序，形成该生的"成功学习序列"。
+
+2.  **计算置信度**: 对于任意技能对 $(A, B)$，系统会计算其前置关系的置信度 $Confidence(A \rightarrow B)$，即"掌握了B的学生中，有多大比例也先掌握了A"。
+    $$
+    \text{Confidence}(A \rightarrow B) = \frac{\text{count}(A \rightarrow B)}{\text{count}(B)}
+    $$
+    其中，$\text{count}(B)$ 是技能B被（首次）答对的总次数，$\text{count}(A \rightarrow B)$ 是在所有学习序列中，A出现在B之前的次数。
+
+3.  **建立关系**: 如果计算出的置信度超过一个预设阈值（例如0.8），并且其共现次数也达到最小支持度，系统就会在技能A和技能B之间添加一条 `prerequisite` 边。
+
 ### 3.2 动态交互更新 (`record_interaction`)
 
 这是系统的核心动态过程。

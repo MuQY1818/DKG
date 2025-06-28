@@ -92,6 +92,19 @@ $$
 \text{sim}(k_i, k_j) = \frac{\vec{v_{k_i}} \cdot \vec{v_{k_j}}}{||\vec{v_{k_i}}|| \cdot ||\vec{v_{k_j}}||}
 $$
 
+#### 3.1.3 Skill Prerequisite Inference (`_infer_skill_prerequisites`)
+The `prerequisite` relationships are automatically discovered by mining the learning sequences of all students. The core idea is that if, in most cases, students master Skill A before mastering Skill B, then A is likely a prerequisite for B.
+
+1.  **Extract Successful Learning Sequences**: For each student, the system identifies all records where they **first correctly answered** a problem related to a skill. These are sorted by time to form the student's "successful learning sequence."
+
+2.  **Calculate Confidence**: For any pair of skills $(A, B)$, the system calculates the confidence of the prerequisite relationship $Confidence(A \rightarrow B)$, which represents "of the students who have mastered B, what proportion have also mastered A first."
+    $$
+    \text{Confidence}(A \rightarrow B) = \frac{\text{count}(A \rightarrow B)}{\text{count}(B)}
+    $$
+    Here, $\text{count}(B)$ is the total number of times skill B was (first) answered correctly, and $\text{count}(A \rightarrow B)$ is the number of times A appeared before B in all learning sequences.
+
+3.  **Establish Relationship**: If the calculated confidence exceeds a preset threshold (e.g., 0.8) and the co-occurrence count meets a minimum support level, the system adds a `prerequisite` edge from Skill A to Skill B.
+
 ### 3.2 Dynamic Interaction Update (`record_interaction`)
 
 This is the core dynamic process of the system.
