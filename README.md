@@ -64,9 +64,10 @@ graph TD
     pip install -r dkg_mvp/requirements.txt
     ```
     
-3.  **Prepare Datasets**:
-    Download `skill_builder_data09-10.csv` and `assistments_2009_2010.csv` and place them in the `dataset/` directory.
-    > (下载 `skill_builder_data09-10.csv` 和 `assistments_2009_2010.csv` 并放入 `dataset/` 目录。)
+3.  **Download Datasets**:
+    Download the required CSV files from the link below and place them in the `dataset/` directory.
+    - **[Go to Dataset Download Page](https://github.com/MuQY1818/DKG/releases/tag/dataset)**
+    > (从下方链接前往数据集下载页面，将所需CSV文件下载并放入 `dataset/` 目录。)
 
 4.  **Run Example**:
     ```bash

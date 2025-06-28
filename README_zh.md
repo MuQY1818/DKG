@@ -92,4 +92,7 @@ python run_api_example.py
 
 系统当前主要使用 **ASSISTments 2009-2010 Skill Builder** 数据集，该数据集包含了丰富的真实学生解题活动日志。
 
-**注意：** 由于文件大小的原因，本仓库未包含相关数据集（如 `skill_builder_data09-10.csv` 和 `assistments_2009_2010.csv`）。在运行示例脚本之前，您需要自行下载这些文件，并将其放置在 `dataset/` 目录下。
+**注意：** 数据集文件已通过 GitHub Releases 托管。请从以下链接下载，并将其放置在 `dataset/` 目录下，然后再运行示例脚本。
+
+- **[下载 `skill_builder_data09-10.csv`](https://github.com/MuQY1818/DKG/releases/download/dataset/skill_builder_data09-10.csv)** (79.8 MB)
+- **[下载 `assistments_2009_2010.csv`](https://github.com/MuQY1818/DKG/releases/download/dataset/assistments_2009_2010.csv)** (116 MB)
