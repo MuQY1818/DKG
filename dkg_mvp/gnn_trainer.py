@@ -19,13 +19,15 @@ from dkg_mvp.data_loader import DataLoader
 # --- Step 1: Define GNN Model and Decoder ---
 
 class GNNEncoder(torch.nn.Module):
-    def __init__(self, hidden_channels, out_channels):
+    def __init__(self, hidden_channels, out_channels, dropout_rate=0.5):
         super().__init__()
         self.conv1 = SAGEConv((-1, -1), hidden_channels)
         self.conv2 = SAGEConv((-1, -1), out_channels)
+        self.dropout = torch.nn.Dropout(dropout_rate)
 
     def forward(self, x, edge_index):
         x = self.conv1(x, edge_index).relu()
+        x = self.dropout(x)
         x = self.conv2(x, edge_index)
         return x
 
@@ -187,12 +189,54 @@ def build_dkg_and_pyg_data():
     
     print("\nStep 2: Building DKG from historical data and converting to PyG format...")
     
-    return pyg_data
+    return pyg_data, dkg_graph, data_dict
 
 # --- Step 4: Main Training Loop ---
 
+def save_embeddings(model, data, student_map, problem_map, skill_map):
+    """Saves the node embeddings from the trained model."""
+    print("\n--- Saving Node Embeddings ---")
+    
+    # Ensure the model is in evaluation mode
+    model.eval()
+    
+    with torch.no_grad():
+        # Generate embeddings for all nodes
+        z_dict = model(data.x_dict, data.edge_index_dict)
+        
+    # Create a directory to save embeddings
+    output_dir = os.path.join('models', 'embeddings')
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # --- Save Student Embeddings ---
+    student_embeddings = z_dict['student'].cpu().numpy()
+    student_ids = list(student_map.keys())
+    student_df = pd.DataFrame(student_embeddings, index=student_ids)
+    student_df.index.name = 'student_id'
+    student_path = os.path.join(output_dir, 'student_embeddings.csv')
+    student_df.to_csv(student_path)
+    print(f"Student embeddings saved to {student_path}")
+
+    # --- Save Problem Embeddings ---
+    problem_embeddings = z_dict['problem'].cpu().numpy()
+    problem_ids = list(problem_map.keys())
+    problem_df = pd.DataFrame(problem_embeddings, index=problem_ids)
+    problem_df.index.name = 'problem_id'
+    problem_path = os.path.join(output_dir, 'problem_embeddings.csv')
+    problem_df.to_csv(problem_path)
+    print(f"Problem embeddings saved to {problem_path}")
+
+    # --- Save Skill Embeddings ---
+    skill_embeddings = z_dict['skill'].cpu().numpy()
+    skill_ids = list(skill_map.keys())
+    skill_df = pd.DataFrame(skill_embeddings, index=skill_ids)
+    skill_df.index.name = 'skill_id'
+    skill_path = os.path.join(output_dir, 'skill_embeddings.csv')
+    skill_df.to_csv(skill_path)
+    print(f"Skill embeddings saved to {skill_path}")
+
 def main():
-    data = build_dkg_and_pyg_data()
+    data, dkg_graph, data_dict = build_dkg_and_pyg_data()
     
     # --- Create masks for splitting supervision edges ---
     edge_label_index = data['student', 'solve', 'problem'].edge_label_index
@@ -256,7 +300,7 @@ def main():
 
     print("\nEpoch | Loss     | Train AUC | Val AUC  | Train F1 | Val F1")
     print("-----------------------------------------------------------------")
-    for epoch in range(1, 51):
+    for epoch in range(1, 101):
         loss = train(model, decoder, data, optimizer, loss_fn)
         train_auc, train_acc, train_f1 = test(model, decoder, data, train_mask)
         val_auc, val_acc, val_f1 = test(model, decoder, data, val_mask)
@@ -265,6 +309,20 @@ def main():
     print("\n--- Final Performance on Test Set ---")
     test_auc, test_acc, test_f1 = test(model, decoder, data, test_mask)
     print(f"Test AUC: {test_auc:.4f}, Test Accuracy: {test_acc:.4f}, Test F1-Score: {test_f1:.4f}")
+
+    # Get the maps for saving
+    student_ids = sorted(data_dict['interactions']['student_id'].unique())
+    problem_ids = sorted(data_dict['interactions']['problem_id'].unique())
+    skill_ids = sorted([
+        node_data['skill_id'] for _, node_data in dkg_graph.nodes(data=True)
+        if node_data.get('type') == 'skill' and 'skill_id' in node_data
+    ])
+    
+    student_map = {nid: i for i, nid in enumerate(student_ids)}
+    problem_map = {nid: i for i, nid in enumerate(problem_ids)}
+    skill_map = {nid: i for i, nid in enumerate(skill_ids)}
+
+    save_embeddings(model, data, student_map, problem_map, skill_map)
 
 if __name__ == '__main__':
     main() 
