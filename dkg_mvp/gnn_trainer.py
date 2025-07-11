@@ -100,49 +100,58 @@ def test(model, decoder, data, mask):
 def convert_to_pyg(dkg_graph, interactions):
     """Converts the NetworkX DKG to a PyG HeteroData object."""
     
-    # Build node maps directly from the interaction data to ensure consistency
-    student_ids = interactions['user_id'].unique()
-    problem_ids = interactions['problem_id'].unique()
-    skill_ids = [data['skill_id'] for _, data in dkg_graph.nodes(data=True) if data.get('type') == 'skill']
+    # 1. Build node maps from the original IDs to dense indices
+    student_ids = sorted(interactions['student_id'].unique())
+    problem_ids = sorted(interactions['problem_id'].unique())
+    skill_ids = sorted([
+        data['skill_id'] for _, data in dkg_graph.nodes(data=True) 
+        if data.get('type') == 'skill' and 'skill_id' in data
+    ])
 
     student_map = {nid: i for i, nid in enumerate(student_ids)}
     problem_map = {nid: i for i, nid in enumerate(problem_ids)}
     skill_map = {nid: i for i, nid in enumerate(skill_ids)}
 
-    # Create edge indices directly from the interactions DataFrame
-    solve_src = [student_map[row['user_id']] for _, row in interactions.iterrows()]
-    solve_dst = [problem_map[row['problem_id']] for _, row in interactions.iterrows()]
+    # 2. Create edge indices for 'solve' relations using the pre-computed indices
+    solve_src = interactions['student_id_idx'].values
+    solve_dst = interactions['problem_id_idx'].values
     solve_edge_index = torch.tensor([solve_src, solve_dst], dtype=torch.long)
     
-    # The labels correspond directly to the interactions DataFrame
+    # 3. The labels correspond directly to the interactions DataFrame
     edge_label = torch.FloatTensor(interactions['correct'].values)
 
-    require_edges = [
-        (problem_map[dkg_graph.nodes[u]['problem_id']], skill_map[dkg_graph.nodes[v]['skill_id']])
-        for u, v, data in dkg_graph.edges(data=True)
+    # 4. Create edge indices for 'require' relations
+    require_edges = []
+    for u, v, data in dkg_graph.edges(data=True):
         if (data.get('type') == 'require' and 
             dkg_graph.nodes[u].get('type') == 'problem' and 
-            dkg_graph.nodes[v].get('type') == 'skill')
-    ]
+            dkg_graph.nodes[v].get('type') == 'skill'):
+            
+            p_id = dkg_graph.nodes[u].get('problem_id')
+            s_id = dkg_graph.nodes[v].get('skill_id')
+            
+            if p_id in problem_map and s_id in skill_map:
+                require_edges.append((problem_map[p_id], skill_map[s_id]))
+
     require_edge_index = torch.tensor(list(zip(*require_edges)), dtype=torch.long) if require_edges else torch.empty((2, 0), dtype=torch.long)
 
     pyg_data = HeteroData()
 
-    # Initialize node features based on the maps derived from interactions
+    # 5. Initialize node features based on the map sizes
     embedding_dim = 64
     pyg_data['student'].x = torch.randn(len(student_ids), embedding_dim)
     pyg_data['problem'].x = torch.randn(len(problem_ids), embedding_dim)
     pyg_data['skill'].x = torch.randn(len(skill_ids), embedding_dim)
 
-    # Add edges
+    # 6. Add edges
     pyg_data['student', 'solve', 'problem'].edge_index = solve_edge_index
     pyg_data['problem', 'require', 'skill'].edge_index = require_edge_index
 
-    # Add labels for link prediction
+    # 7. Add labels for link prediction
     pyg_data['student', 'solve', 'problem'].edge_label = edge_label
     pyg_data['student', 'solve', 'problem'].edge_label_index = solve_edge_index
 
-    # Add reverse edges
+    # 8. Add reverse edges
     pyg_data = T.ToUndirected()(pyg_data)
 
     print("PyG data object created:", pyg_data)
@@ -151,12 +160,17 @@ def convert_to_pyg(dkg_graph, interactions):
 
 def build_dkg_and_pyg_data():
     """Builds the DKG and converts it to PyG format."""
-    print("Loading Skill Builder 2009-2010 dataset...")
+    print("Loading Filtered Skill Builder dataset...")
     loader = DataLoader('dataset')
-    data_dict = loader.load_assistments_log_data('skill_builder')
+    # 使用新的数据加载方法
+    data_dict = loader.load_skill_builder_data()
     
-    # Use a larger subset for a more realistic training
-    data_dict['interactions'] = data_dict['interactions'].head(20000)
+    if data_dict is None:
+        print("Failed to load data. Exiting.")
+        sys.exit(1) # Or handle the error appropriately
+    
+    # 不再需要对交互数据进行子集筛选
+    # data_dict['interactions'] = data_dict['interactions'].head(20000)
     
     dkg_builder = DKGBuilder()
     dkg_graph = dkg_builder.build_from_data(data_dict)

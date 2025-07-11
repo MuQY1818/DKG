@@ -112,7 +112,11 @@ class DKGBuilder:
     def _create_nodes(self, data: Dict):
         """创建图谱节点"""
         interactions = data.get('interactions')
-        if interactions is None:
+        problems_df = data.get('problem_descriptions')
+        skills_df = data.get('skill_descriptions')
+
+        if interactions is None or problems_df is None or skills_df is None:
+            print("Warning: Missing interactions, problems, or skills data. Cannot create all nodes.")
             return
 
         # 创建学生节点
@@ -122,50 +126,31 @@ class DKGBuilder:
                 f"student_{student_id}",
                 type='student',
                 student_id=int(student_id),
-                # 引入学生的"个性"参数
-                learning_rate=np.random.normal(1.0, 0.1), # 学习效率
-                perseverance=np.random.randint(3, 7), # 毅力：连续失败多少次会沮丧
-                curiosity=np.random.uniform(0.05, 0.2), # 好奇心/探索欲
-                ability_vector=None,  # 后续计算
+                learning_rate=np.random.normal(1.0, 0.1),
+                perseverance=np.random.randint(3, 7),
+                curiosity=np.random.uniform(0.05, 0.2),
+                ability_vector=None,
                 learning_style=None,
                 progress_rate=0.0
             )
         
-        # 创建题目节点
-        problem_ids = interactions['problem_id'].unique()
-        problem_desc = data.get('problem_descriptions')
-        
-        for problem_id in problem_ids:
-            problem_type = 'objective'  # 默认值
-            max_score = 1.0  # 默认值
-            
-            if problem_desc is not None and problem_id < len(problem_desc):
-                if 'Type' in problem_desc.columns:
-                    problem_type = problem_desc.iloc[problem_id]['Type']
-                if 'Full Score' in problem_desc.columns:
-                    max_score = float(problem_desc.iloc[problem_id]['Full Score'])
-            
+        # 创建题目节点 (从 problems_df 创建所有题目)
+        for problem_id in problems_df.index:
             self.graph.add_node(
                 f"problem_{problem_id}",
                 type='problem',
                 problem_id=int(problem_id),
-                problem_type=problem_type,
-                max_score=max_score,
-                difficulty=0.5,  # 后续计算
-                discrimination=0.5  # 后续计算
+                difficulty=problems_df.loc[problem_id].get('initDifficulty', 0.5)
             )
         
-        # 创建技能节点
-        skills = data.get('skills', {})
-        for skill_id, skill_name in skills.items():
+        # 创建技能节点 (从 skills_df 创建所有技能)
+        for skill_id, skill_row in skills_df.iterrows():
             self.graph.add_node(
                 f"skill_{skill_id}",
                 type='skill',
-                skill_id=skill_id,
-                skill_name=skill_name,
-                difficulty_level=0.5,  # 后续计算
-                importance_weight=1.0,
-                subject_area='math'
+                skill_id=int(skill_id),
+                skill_name=skill_row.get('skill_name', ''),
+                difficulty_level=skill_row.get('initDifficulty', 0.5)
             )
     
     def _create_basic_relations(self, data: Dict):
@@ -185,6 +170,7 @@ class DKGBuilder:
             # 日志型数据
             interactions = data['interactions']
             for _, row in interactions.iterrows():
+                # 使用原始ID来创建图中的节点关系
                 student_id = row['student_id']
                 problem_id = row['problem_id']
                 correct = int(row['correct'])
@@ -239,25 +225,49 @@ class DKGBuilder:
     
     def _create_require_relations(self, data: Dict):
         """创建题目-技能需求关系"""
-        problem_skill_matrix = data.get('problem_skill_matrix')
-        if problem_skill_matrix is not None:
-            matrix = problem_skill_matrix.values
-            
-            for problem_idx in range(matrix.shape[0]):
-                for skill_idx in range(matrix.shape[1]):
-                    if matrix[problem_idx, skill_idx] == 1:
-                        # 计算重要性权重(基于该技能对应的题目数量)
-                        skill_problem_count = np.sum(matrix[:, skill_idx])
-                        importance = 1.0 / skill_problem_count if skill_problem_count > 0 else 1.0
-                        
-                        self.graph.add_edge(
-                            f"problem_{problem_idx}",
-                            f"skill_{skill_idx + 1}",  # 技能ID从1开始
-                            type='require',
-                            importance_weight=importance,
-                            necessity_level='required'
-                        )
-    
+        problems_df = data.get('problem_descriptions')
+        if problems_df is None or 'skill_id' not in problems_df.columns:
+            # 如果使用旧的数据格式，则回退到矩阵方法
+            problem_skill_matrix = data.get('problem_skill_matrix')
+            if problem_skill_matrix is not None:
+                matrix = problem_skill_matrix.values
+                skill_ids = sorted(data.get('skills', {}).keys()) # 获取排序后的技能索引
+
+                for p_idx in range(matrix.shape[0]):
+                    problem_id = problem_skill_matrix.index[p_idx] # 假设索引是problem_id
+                    for s_idx_in_matrix in range(matrix.shape[1]):
+                        if matrix[p_idx, s_idx_in_matrix] == 1:
+                            skill_id = skill_ids[s_idx_in_matrix]
+                            self.graph.add_edge(
+                                f"problem_{problem_id}",
+                                f"skill_{skill_id}",
+                                type='require',
+                                necessity_level='required'
+                            )
+            return
+
+        # 首选方法：直接从DataFrame创建关系
+        # 重置索引，以便我们可以迭代行
+        if not isinstance(problems_df.index, pd.RangeIndex):
+            problems_df = problems_df.reset_index()
+
+        for _, row in problems_df.iterrows():
+            if pd.notna(row['problem_id']) and pd.notna(row['skill_id']):
+                problem_id = int(row['problem_id'])
+                skill_id = int(row['skill_id'])
+                
+                # 确保节点存在于图中
+                problem_node = f"problem_{problem_id}"
+                skill_node = f"skill_{skill_id}"
+                
+                if self.graph.has_node(problem_node) and self.graph.has_node(skill_node):
+                    self.graph.add_edge(
+                        problem_node,
+                        skill_node,
+                        type='require',
+                        necessity_level='required'
+                    )
+
     def _create_master_relations(self, data: Dict):
         """创建学生-技能掌握关系"""
         # 直接计算技能掌握度
