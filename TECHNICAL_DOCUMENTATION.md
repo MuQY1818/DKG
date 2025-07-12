@@ -29,19 +29,19 @@
 图谱中主要有三种类型的节点：`student`, `problem`, `skill`。
 
 #### a) 学生节点 (`student`)
-- **唯一标识**: `student_{student_id}` (例如: `student_0`)
+- **唯一标识**: `student_{student_id}` (例如: `student_73963`)
 - **类型属性**: `type='student'`
 - **核心属性**:
-    - `student_id` (int): 学生的数字索引ID。
+    - `student_id` (int): 学生的**原始ID**。
     - `learning_rate` (float): **[个性化参数]** 学生的学习效率，影响其掌握度更新速度。
     - `perseverance` (int): **[个性化参数]** 学生的毅力，影响其面对挫折的行为。
     - `curiosity` (float): **[个性化参数]** 学生的好奇心，影响其对新知识的探索倾向。
 
 #### b) 题目节点 (`problem`)
-- **唯一标识**: `problem_{problem_id}` (例如: `problem_15`)
+- **唯一标识**: `problem_{problem_id}` (例如: `problem_76429`)
 - **类型属性**: `type='problem'`
 - **核心属性**:
-    - `problem_id` (int): 题目的数字索引ID。
+    - `problem_id` (int): 题目的**原始ID**。
     - `problem_type` (str): 题目类型（如 `objective`）。
     - `max_score` (float): 题目的满分。
     - `difficulty` (float): **[动态属性]** 题目的难度系数。
@@ -50,10 +50,10 @@
     - `discrimination` (float): **[静态属性]** 题目的区分度，衡量其区分高低水平学生的能力。
 
 #### c) 技能节点 (`skill`)
-- **唯一标识**: `skill_{skill_id}` (例如: `skill_25`)
+- **唯一标识**: `skill_{skill_id}` (例如: `skill_297`)
 - **类型属性**: `type='skill'`
 - **核心属性**:
-    - `skill_id` (int): 技能的数字索引ID。
+    - `skill_id` (int): 技能的**原始ID**。
     - `skill_name` (str): 技能的文本名称 (例如: "Addition and Subtraction of Integers")。
     - `difficulty_level` (float): 技能本身的难度。
     - `importance_weight` (float): 技能的重要性权重。
@@ -82,9 +82,9 @@
 - **描述**: 这是整个学生模型的核心。它表示一个学生对某个技能的掌握程度。这条边的属性是动态更新的。
 - **类型属性**: `type='master'`
 - **核心属性**:
-    - `mastery_score` (float): **[核心动态指标]** 对该技能的当前掌握水平。
+    - `mastery_level` (float): **[核心动态指标]** 对该技能的当前掌握水平。
         - **计算方法**: 详见 3.2.2 节。
-    - `history` (list): 记录了与该技能相关的历次交互正误（`[1, 0, 1]`）。
+    - `confidence` (float): 对当前掌握水平的置信度。
     - `last_updated` (timestamp): 最近一次更新的时间。
 
 #### d) `prerequisite` (技能 -> 技能)

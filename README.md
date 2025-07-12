@@ -69,10 +69,12 @@ graph TD
     - **[Go to Dataset Download Page](https://github.com/MuQY1818/DKG/releases/tag/dataset)**
     > (从下方链接前往数据集下载页面，将所需CSV文件下载并放入 `dataset/` 目录。)
 
-4.  **Run Example**:
+4.  **Run API Server**:
     ```bash
-    python run_api_example.py
+    # 首次运行前，请确保已根据 dkg_mvp/gnn_trainer.py 训练并生成了GNN嵌入文件
+    uvicorn api_server:app --reload
     ```
+    服务器启动后，请在浏览器中访问 `http://127.0.0.1:5000/docs` 查看交互式API文档。
 
 ---
 

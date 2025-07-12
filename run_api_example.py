@@ -19,7 +19,7 @@ if not os.path.exists(DKG_SAVE_PATH):
     from dkg_mvp.data_loader import DataLoader
     
     loader = DataLoader('dataset')
-    log_data = loader.load_assistments_log_data('skill_builder')
+    log_data = loader.load_skill_builder_data()
     
     if log_data:
         builder = DKGBuilder()

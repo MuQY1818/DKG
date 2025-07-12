@@ -270,28 +270,38 @@ class DKGBuilder:
 
     def _create_master_relations(self, data: Dict):
         """创建学生-技能掌握关系"""
-        # 直接计算技能掌握度
         skill_mastery = self._compute_skill_mastery_direct(data)
         
-        num_students = data.get('num_students', 0)
-        num_skills = data.get('num_skills', 0)
+        student_map = data.get('student_map', {})
+        skill_map = data.get('skill_map', {})
 
-        for student_idx in range(num_students):
-            for skill_idx in range(1, num_skills + 1): # 技能ID从1开始
-                mastery_level = 0.0 # 默认值
-                if student_idx in skill_mastery.index and skill_idx in skill_mastery.columns:
-                    mastery_level = skill_mastery.loc[student_idx, skill_idx]
+        if not student_map or not skill_map:
+            print("Warning: student_map or skill_map not found in data. Cannot create 'master' relations.")
+            return
 
+        inv_student_map = {v: k for k, v in student_map.items()}
+        inv_skill_map = {v: k for k, v in skill_map.items()}
+
+        for student_idx, row in skill_mastery.iterrows():
+            student_id = inv_student_map.get(student_idx)
+            if student_id is None:
+                continue
+
+            for skill_idx, mastery_level in row.items():
+                skill_id = inv_skill_map.get(skill_idx)
+                if skill_id is None:
+                    continue
+                
                 confidence = min(mastery_level * 1.2, 1.0)
 
                 self.graph.add_edge(
-                    f"student_{student_idx}",
-                    f"skill_{skill_idx}",
+                    f"student_{student_id}",
+                    f"skill_{skill_id}",
                     type='master',
                     mastery_level=float(mastery_level),
                     confidence=confidence,
                     last_updated=None,
-                    attempts_count=0 # 初始构建时可以为0
+                    attempts_count=0 
                 )
     
     def _infer_skill_prerequisites(self, data: Dict):
@@ -744,30 +754,34 @@ class DKGBuilder:
         Returns:
             学生×技能的掌握程度矩阵
         """
-        if 'interactions' in data:
-            interactions = data['interactions']
-            problem_skill = data['problem_skill_matrix'] #已经是 problem_idx x skill_idx 的矩阵
-            
-            # 创建一个 problem_id -> list of skill_ids 的映射
-            problem_to_skills = {}
-            for p_idx in range(problem_skill.shape[0]):
-                # problem_skill 的列是 skill_id, 从1开始
-                required_skills = problem_skill.columns[problem_skill.iloc[p_idx] == 1].tolist()
-                problem_to_skills[p_idx] = required_skills
+        if 'interactions' not in data or 'problem_skill_matrix' not in data:
+            return pd.DataFrame()
 
-            # 将技能要求合并到交互数据中
-            interactions['skills'] = interactions['problem_id'].map(problem_to_skills)
-            
-            # 展开数据，使得每行是一个 (学生, 题目, 技能) 的交互
-            exploded_interactions = interactions.explode('skills').dropna(subset=['skills'])
-            
-            # 按 (学生, 技能) 分组计算正确率
-            skill_mastery = exploded_interactions.groupby(['student_id', 'skills'])['correct'].mean().unstack(fill_value=0.0)
-            
-            return skill_mastery
+        interactions = data['interactions'].copy()
+        problem_skill = data['problem_skill_matrix']
+
+        # 创建一个 problem_idx -> list of skill_idx 的映射
+        problem_to_skills = {
+            p_idx: problem_skill.columns[problem_skill.iloc[p_idx] == 1].tolist()
+            for p_idx in range(problem_skill.shape[0])
+        }
+
+        # 使用 problem_id_idx (题目索引) 来映射技能
+        interactions['skill_indices'] = interactions['problem_id_idx'].map(problem_to_skills)
         
-        else:
-            raise ValueError("不支持的数据格式,缺少'interactions'数据。")
+        # 展开数据，使得每行是一个 (学生, 题目, 技能索引) 的交互
+        exploded_df = interactions.explode('skill_indices').dropna(subset=['skill_indices'])
+        
+        if exploded_df.empty:
+            return pd.DataFrame()
+
+        # 按 (学生索引, 技能索引) 分组计算正确率
+        # 确保列是整数类型以进行正确分组
+        exploded_df['skill_indices'] = exploded_df['skill_indices'].astype(int)
+        
+        skill_mastery = exploded_df.groupby(['student_id_idx', 'skill_indices'])['correct'].mean().unstack(fill_value=0.0)
+        
+        return skill_mastery
 
     def generate_llm_prompt(self, student_id: int, target_skill_ids: List[int], num_weakest: int = 5, num_strongest: int = 5) -> str:
         """

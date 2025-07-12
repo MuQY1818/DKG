@@ -25,7 +25,7 @@ class DataLoader:
         self.processed_data_dir = os.path.join(self.base_dir, 'processed')
         os.makedirs(self.processed_data_dir, exist_ok=True)
     
-    def load_skill_builder_data(self, interaction_file: str = 'skill_builder_data_filter15.csv') -> Optional[Dict]:
+    def load_skill_builder_data(self, interaction_file: str = 'skill_builder_data_filter15.csv', nrows: Optional[int] = None) -> Optional[Dict]:
         """
         从筛选后的Skill Builder日志数据构建DKG所需的数据结构。
 
@@ -33,6 +33,7 @@ class DataLoader:
             interaction_file: 包含学生交互记录的文件名。
                               默认为 'skill_builder_data_filter15.csv'。
                               也可以使用 'log79021.csv' 或 'builder_top100.csv'。
+            nrows: 要读取的交互记录行数，用于快速测试。
 
         Returns:
             处理后的数据集字典，包含 'interactions', 'problems', 'skills', 
@@ -53,7 +54,7 @@ class DataLoader:
 
         try:
             # 加载交互、问题和技能数据
-            interactions_df = pd.read_csv(interactions_path, encoding='latin1', low_memory=False)
+            interactions_df = pd.read_csv(interactions_path, encoding='latin1', low_memory=False, nrows=nrows)
             problems_df = pd.read_csv(problems_path, encoding='latin1')
             skills_df = pd.read_csv(skills_path, encoding='latin1')
         except Exception as e:
@@ -150,7 +151,10 @@ class DataLoader:
             'num_problems': len(problem_ids),
             'num_skills': len(skill_ids),
             'problem_descriptions': problems_df.set_index('problem_id'),
-            'skill_descriptions': skills_df.set_index('skill_id')
+            'skill_descriptions': skills_df.set_index('skill_id'),
+            'student_map': student_map,
+            'problem_map': problem_map,
+            'skill_map': skill_map
         }
 
 def main():
