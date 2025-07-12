@@ -13,7 +13,7 @@
 - **图谱构建与更新层 (Graph Construction & Update Layer)**: 这是系统的核心，由 `dkg_builder.py` 实现。它负责：
     1.  **静态构建**: 根据预处理后的数据，初始化整个知识图谱，创建包含学生、题目、技能的节点，以及它们之间的初始关系。
     2.  **动态更新**: 提供 `record_interaction` 等接口，在接收到新的学习行为后，实时更新图谱中的节点属性和关系权重，最核心的是更新学生对技能的"掌握度"。
-- **API与应用层 (API & Application Layer)**: `DKGBuilder` 类同样暴露了一系列查询和推荐接口（如 `get_student_profile`, `recommend_next_problems`），供上层应用（例如 `run_api_example.py` 或未来的LLM集成应用）调用，以获取决策支持。
+- **API与应用层 (API & Application Layer)**: `DKGBuilder` 类同样暴露了一系列查询和推荐接口（如 `get_student_profile`, `recommend_next_problems`），供上层应用（例如 `api_server.py` 或未来的LLM集成应用）调用，以获取决策支持。
 
 数据流向：
 `CSV文件` -> `DataLoader` -> `结构化字典` -> `DKGBuilder` -> `动态知识图谱 (内存中)` -> `API调用` -> `应用结果 (画像, 推荐等)`

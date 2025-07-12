@@ -25,7 +25,7 @@ The graph uses `networkx.MultiDiGraph` to allow multiple types of directed edges
 
 #### a) Student Node
 - **Key Attributes**:
-    - `student_id` (int): The numerical index ID of the student.
+    - `student_id` (int): The student's original numerical ID from the dataset.
     - `learning_rate` (float): **[Personalization Param]** The student's learning efficiency, affecting their mastery update speed.
     - `perseverance` (int): **[Personalization Param]** The student's persistence, affecting their behavior when facing setbacks.
     - `curiosity` (float): **[Personalization Param]** The student's curiosity, influencing their tendency to explore new knowledge areas.
@@ -54,9 +54,10 @@ The graph uses `networkx.MultiDiGraph` to allow multiple types of directed edges
 #### c) `master` (Student -> Skill)
 - **Description**: **Core of the model**, dynamically represents a student's mastery of a skill.
 - **Key Attributes**:
-    - `mastery_score` (float): **[Core Dynamic Metric]** The current mastery level of the skill.
-        - **Calculation Method**: See Section 3.2.2.
-    - `history` (list): Records the history of correctness for interactions related to this skill (e.g., `[1, 0, 1]`).
+    - `mastery_level` (float): **[Core Dynamic Metric]** The current mastery level of the skill.
+        - **Calculation Method**: See Section 3.1.1.
+    - `confidence` (float): The confidence level for the current mastery score.
+    - `last_updated` (timestamp): The timestamp of the last update.
 
 #### d) `prerequisite` (Skill -> Skill)
 - **Description**: Prerequisite dependency relationship between skills.
@@ -118,7 +119,7 @@ The core flow of this function is as follows:
       $$
       M_{new} = \text{clip}(M_{current} + \Delta M_{base} + \text{bonus}_{epiphany}, 0, 1)
       $$
-      Here, `learning_rate` is a personalized student parameter, enabling differential modeling. The code also includes an `is_epiphany` interface, allowing for a significant non-linear increase in mastery under specific conditions.
+      Here, `learning_rate` is a personalized student parameter, enabling differential modeling. The code also includes an `is_epiphany` (epiphany) interface, allowing for a significant non-linear increase in mastery under specific conditions.
 
 3.  **Knowledge Reinforcement Propagation (`_propagate_reinforcement`)**: This is the most sophisticated part of the dynamic update.
     - After a skill's mastery level is increased from the interaction, the system initiates a recursive reinforcement process.
@@ -265,5 +266,4 @@ The `DKGBuilder` is designed with compatibility for various educational data for
 - **Binary Matrix**: A (student x problem) matrix of 0s and 1s, representing correctness (e.g., the FrcSub dataset).
 - **Continuous Score Matrix**: A (student x problem) matrix of floating-point numbers, representing score ratios (e.g., the Math1/Math2 datasets).
 
-This flexibility allows the tool to be conveniently applied to a broader range of educational scenarios.
-... 
+This flexibility allows the tool to be conveniently applied to a broader range of educational scenarios. 

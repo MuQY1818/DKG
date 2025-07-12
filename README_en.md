@@ -19,10 +19,11 @@ This project provides a backend engine for a Dynamic Knowledge Graph (DKG) desig
 .
 ├── DKG_API_使用指南.md    # Detailed API documentation in Chinese (Primary Reference) 🌟
 ├── api_server.py            # FastAPI Server Entrypoint 🚀
+├── dkg.pkl                  # Serialized DKG model file 💾
 ├── README.md                # Main README for language selection
 ├── README_en.md             # English README (this file)
 ├── README_zh.md             # Chinese README
-├── models/                  # Directory for persisted graph and embedding models
+├── models/                  # Directory for GNN embedding models
 ├── dataset/                 # Directory for datasets
 │   └── clear_dataset/       # Cleaned datasets
 ├── dkg_mvp/
@@ -42,23 +43,23 @@ First, clone the repository and install the required dependencies.
 ```bash
 git clone https://github.com/MuQY1818/DKG.git
 cd DKG
+# Note: Please first follow the instructions at the top of dkg_mvp/requirements.txt
+# to install versions of PyTorch and PyG that match your environment.
 pip install -r dkg_mvp/requirements.txt
-# Install extra dependencies for the API server
-pip install fastapi "uvicorn[standard]"
 ```
 
 ### 2. Prepare Model Files (First-time Run)
 
 Before starting the server, ensure you have generated the necessary model files.
-- **DKG Graph**: Running `python dkg_mvp/dkg_builder.py` will build and save the `dkg_skill_builder.graphml` file to the `models/` directory.
-- **GNN Embeddings**: Running `python dkg_mvp/gnn_trainer.py` will train the GNN and save the embedding vectors to the `models/embeddings/` directory.
+- **DKG Graph**: Running `python -m dkg_mvp.dkg_builder` will build and save the `dkg.pkl` file to the project root directory.
+- **GNN Embeddings**: Running `python -m dkg_mvp.gnn_trainer` will train the GNN and save the embedding vectors to the `models/embeddings/` directory.
 
 ### 3. Start the API Server
 
 Execute the following command to start the backend API service:
 
 ```bash
-uvicorn api_server:app --reload
+python api_server.py
 ```
 
 After the server starts, open your browser and navigate to **`http://127.0.0.1:5000/docs`** to access the interactive API documentation, where you can test all endpoints directly.

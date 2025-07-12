@@ -15,10 +15,9 @@ from dkg_mvp.data_loader import DataLoader # 新增导入
 
 # --- 全局变量 ---
 MODELS_DIR = "models"
-# DKG_SAVE_PATH 不再需要
+DKG_SAVE_PATH = "dkg.pkl" # 使用新的 pickle 文件路径
 EMBEDDINGS_DIR = os.path.join(MODELS_DIR, "embeddings")
-# 新增数据集路径
-DATASET_DIR = "dataset"
+# DATASET_DIR 不再需要在API服务器中定义
 
 app = FastAPI(
     title="动态知识图谱 (DKG) API",
@@ -50,26 +49,17 @@ def startup_event():
     """在服务器启动时加载所有模型和数据"""
     print("--- 服务器启动中，正在加载模型... ---")
     
-    # 1. 实时构建DKG主图谱，不再从文件加载
-    print("实时构建DKG...")
-    try:
-        # 指向数据集根目录
-        loader = DataLoader(DATASET_DIR)
-        data_dict = loader.load_skill_builder_data()
-        
-        if data_dict:
-            builder = DKGBuilder()
-            builder.build_from_data(data_dict)
-            app.state.dkg_builder = builder
-            print(f"DKG实时构建完成，包含 {builder.graph.number_of_nodes()} 个节点和 {builder.graph.number_of_edges()} 条边。")
-        else:
-            print("错误：加载数据失败，无法构建DKG。")
-            app.state.dkg_builder = DKGBuilder() # 创建一个空的builder以避免崩溃
+    # 1. 从 pickle 文件加载 DKG
+    print(f"从 {DKG_SAVE_PATH} 加载 DKG 实例...")
+    app.state.dkg_builder = DKGBuilder.load_with_pickle(DKG_SAVE_PATH)
 
-    except Exception as e:
-        print(f"在构建DKG时发生严重错误: {e}")
-        # 在启动失败时创建一个空的builder实例，以允许服务启动并报告错误
-        app.state.dkg_builder = DKGBuilder()
+    # 如果加载失败，则服务将处于非活动状态，但不会崩溃
+    if app.state.dkg_builder is None:
+        print(f"警告：无法从 {DKG_SAVE_PATH} 加载 DKG。服务将以无图谱状态启动。")
+        print("请先成功运行 dkg_builder.py 来生成 dkg.pkl 文件。")
+        app.state.dkg_builder = DKGBuilder() # 创建一个空实例以防崩溃
+    else:
+        print("DKG 实例加载完毕。")
 
     # 2. 加载GNN生成的嵌入向量
     try:

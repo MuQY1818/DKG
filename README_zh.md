@@ -19,10 +19,11 @@
 .
 ├── DKG_API_使用指南.md    # 详细的API中文文档 (首选参考) 🌟
 ├── api_server.py            # FastAPI 服务器入口 🚀
+├── dkg.pkl                  # 序列化后的DKG模型文件 💾
 ├── README.md                # 主README，提供语言选择
 ├── README_en.md             # 英文版README
 ├── README_zh.md             # 中文版README (本文)
-├── models/                  # 存放持久化图谱和嵌入模型的目录
+├── models/                  # 存放GNN嵌入模型的目录
 ├── dataset/                 # 存放原始数据集
 │   └── clear_dataset/       # 清洗后的数据集
 ├── dkg_mvp/
@@ -42,23 +43,22 @@
 ```bash
 git clone https://github.com/MuQY1818/DKG.git
 cd DKG
+# 注意：请先根据 dkg_mvp/requirements.txt 文件顶部的说明，安装匹配的PyTorch和PyG
 pip install -r dkg_mvp/requirements.txt
-# 安装API服务器所需的额外依赖
-pip install fastapi "uvicorn[standard]"
 ```
 
 ### 2. 准备模型文件 (首次运行)
 
 在启动服务器前，请确保已生成了必要的模型文件。
-- **DKG图谱**: 运行 `python dkg_mvp/dkg_builder.py` 会使用数据集构建并保存 `dkg_skill_builder.graphml` 文件到 `models/` 目录。
-- **GNN嵌入**: 运行 `python dkg_mvp/gnn_trainer.py` 会训练GNN并保存嵌入向量到 `models/embeddings/` 目录。
+- **DKG图谱**: 运行 `python -m dkg_mvp.dkg_builder` 会使用数据集构建并保存 `dkg.pkl` 文件到项目根目录。
+- **GNN嵌入**: 运行 `python -m dkg_mvp.gnn_trainer` 会训练GNN并保存嵌入向量到 `models/embeddings/` 目录。
 
 ### 3. 启动API服务器
 
 执行以下命令来启动后端API服务：
 
 ```bash
-uvicorn api_server:app --reload
+python api_server.py
 ```
 
 服务器启动后，在浏览器中打开 **`http://127.0.0.1:5000/docs`** 即可访问交互式的API文档，您可以在该页面直接测试所有API。

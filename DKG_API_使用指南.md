@@ -18,22 +18,22 @@
 本项目使用FastAPI构建，提供了一个高性能的、带有交互式文档的API服务。
 
 1.  **确保依赖已安装**:
+    首先，请根据 `dkg_mvp/requirements.txt` 文件顶部的说明，手动安装与您环境匹配的PyTorch和PyG。然后，安装其余的依赖：
     ```bash
     pip install -r dkg_mvp/requirements.txt
-    pip install fastapi "uvicorn[standard]"
     ```
 
 2.  **构建必要的模型文件**:
-    在首次运行前，请确保`models/`目录下已经有构建好的DKG模型和GNN嵌入。
-    - 运行 `python dkg_mvp/dkg_builder.py` 或 `python run_api_example.py` 来生成 `dkg_skill_builder.graphml`。
-    - 运行 `python dkg_mvp/gnn_trainer.py` 来生成 `models/embeddings/` 目录下的嵌入文件。
+    在首次运行前，请确保项目根目录下已经有构建好的DKG模型，以及GNN嵌入。
+    - 运行 `python -m dkg_mvp.dkg_builder` 来生成 `dkg.pkl` 文件。
+    - 运行 `python -m dkg_mvp.gnn_trainer` 来生成 `models/embeddings/` 目录下的嵌入文件。
 
 3.  **启动服务器**:
     在项目根目录运行以下命令：
     ```bash
-    uvicorn api_server:app --host 0.0.0.0 --port 5000 --reload
+    python api_server.py
     ```
-    - `--reload` 参数使服务器在代码更改后自动重启，非常适合开发环境。
+    服务器默认会运行在 `http://127.0.0.1:5000`。
 
 4.  **访问交互式API文档**:
     服务器启动后，在浏览器中打开 **`http://127.0.0.1:5000/docs`**。

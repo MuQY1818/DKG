@@ -8,6 +8,7 @@ from typing import Dict, List, Tuple, Optional, Set
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.cluster import KMeans
 import os
+import pickle # 新增导入
 
 class DKGBuilder:
     """动态知识图谱构建器"""
@@ -73,6 +74,21 @@ class DKGBuilder:
         except Exception as e:
             print(f"Error saving DKG to {file_path}: {e}")
 
+    def save_with_pickle(self, file_path: str):
+        """
+        使用 pickle 将整个 DKGBuilder 实例保存到文件。
+        这比 GraphML 更快且更可靠。
+
+        Args:
+            file_path: 文件路径 (推荐使用.pkl)
+        """
+        try:
+            with open(file_path, 'wb') as f:
+                pickle.dump(self, f)
+            print(f"DKG instance successfully pickled to {file_path}")
+        except Exception as e:
+            print(f"Error pickling DKG instance to {file_path}: {e}")
+
     @classmethod
     def load_graph(cls, file_path: str) -> 'DKGBuilder':
         """
@@ -108,6 +124,28 @@ class DKGBuilder:
             print(f"Error loading DKG from {file_path}: {e}")
             builder.graph = nx.MultiDiGraph() # Return with an empty graph
         return builder
+
+    @classmethod
+    def load_with_pickle(cls, file_path: str) -> Optional['DKGBuilder']:
+        """
+        使用 pickle 从文件加载 DKGBuilder 实例。
+
+        Args:
+            file_path: 文件路径
+            
+        Returns:
+            一个包含已加载图谱的DKGBuilder实例，如果失败则返回None。
+        """
+        try:
+            with open(file_path, 'rb') as f:
+                builder = pickle.load(f)
+            print(f"DKG instance successfully unpickled from {file_path}")
+            return builder
+        except FileNotFoundError:
+            print(f"Error: The pickle file {file_path} was not found.")
+        except Exception as e:
+            print(f"Error unpickling DKG from {file_path}: {e}")
+        return None
 
     def _create_nodes(self, data: Dict):
         """创建图谱节点"""
@@ -929,8 +967,8 @@ def main():
         
         # 3. 保存图谱
         # 将图谱保存在项目根目录
-        save_path = os.path.join(os.path.dirname(__file__), '..', 'dkg.gml')
-        builder.save_graph(save_path)
+        save_path = os.path.join(os.path.dirname(__file__), '..', 'dkg.pkl')
+        builder.save_with_pickle(save_path)
     else:
         print("Failed to load data. DKG build process aborted.")
     # --- 结束新增代码 ---

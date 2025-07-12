@@ -24,10 +24,11 @@ graph TD
     subgraph "核心引擎 (Core DKG Engine)"
         C["DKGBuilder (dkg_builder.py)"]
         D["内存中的知识图谱 <br> (networkx.MultiDiGraph)"]
+        H["持久化模型 <br> dkg.pkl"]
     end
 
     subgraph "应用层 (Application Layer)"
-        E["API 使用示例 <br> run_api_example.py"]
+        E["API 服务器 <br> api_server.py"]
         F["大语言模型 (LLM) 集成"]
         G["可视化 & 分析"]
     end
@@ -35,10 +36,12 @@ graph TD
     A --> B;
     B --> C;
     C -- "构建/更新" --> D;
+    C -- "序列化" --> H;
+    H -- "启动时加载" --> E;
     D -- "查询" --> C;
     C -- "提供API" --> E;
-    C -- "提供API" --> F;
-    C -- "提供API" --> G;
+    E -- "提供端点" --> F;
+    E -- "提供端点" --> G;
 ```
 
 ## ✨ Core Features / 核心功能
@@ -63,13 +66,23 @@ graph TD
     ```bash
     pip install -r dkg_mvp/requirements.txt
     ```
+    > **Note**: For PyTorch and PyG, please follow the manual installation instructions at the top of the `requirements.txt` file to match your CUDA version.
     
-3.  **Run API Server**:
+3.  **Generate Model Files**:
+    Before the first run, you must generate the necessary model files:
     ```bash
-    # 首次运行前，请确保已根据 dkg_mvp/gnn_trainer.py 训练并生成了GNN嵌入文件
-    uvicorn api_server:app --reload
+    # 1. Generate the DKG model file (dkg.pkl)
+    python -m dkg_mvp.dkg_builder
+
+    # 2. Generate the GNN embedding files
+    python -m dkg_mvp.gnn_trainer
     ```
-    服务器启动后，请在浏览器中访问 `http://127.0.0.1:5000/docs` 查看交互式API文档。
+
+4.  **Run API Server**:
+    ```bash
+    python api_server.py
+    ```
+    Once the server is running, visit `http://127.0.0.1:5000/docs` in your browser to see the interactive API documentation.
 
 ---
 
