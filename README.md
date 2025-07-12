@@ -64,12 +64,7 @@ graph TD
     pip install -r dkg_mvp/requirements.txt
     ```
     
-3.  **Download Datasets**:
-    Download the required CSV files from the link below and place them in the `dataset/` directory.
-    - **[Go to Dataset Download Page](https://github.com/MuQY1818/DKG/releases/tag/dataset)**
-    > (从下方链接前往数据集下载页面，将所需CSV文件下载并放入 `dataset/` 目录。)
-
-4.  **Run API Server**:
+3.  **Run API Server**:
     ```bash
     # 首次运行前，请确保已根据 dkg_mvp/gnn_trainer.py 训练并生成了GNN嵌入文件
     uvicorn api_server:app --reload

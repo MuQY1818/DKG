@@ -18,16 +18,17 @@ This project provides a backend engine for a Dynamic Knowledge Graph (DKG) desig
 ```
 .
 ├── DKG_API_使用指南.md    # Detailed API documentation in Chinese (Primary Reference) 🌟
-├── README.md                # This file, project overview
-├── run_api_example.py       # Script demonstrating API usage
-├── models/                  # Directory for storing persisted graph models
-├── dataset/                 # Directory for raw datasets
-│   └── skill_builder_data09-10.csv # Primary dataset used
+├── api_server.py            # FastAPI Server Entrypoint 🚀
+├── README.md                # Main README for language selection
+├── README_en.md             # English README (this file)
+├── README_zh.md             # Chinese README
+├── models/                  # Directory for persisted graph and embedding models
+├── dataset/                 # Directory for datasets
+│   └── clear_dataset/       # Cleaned datasets
 ├── dkg_mvp/
 │   ├── dkg_builder.py       # Core DKG class, provides all APIs ⭐
+│   ├── gnn_trainer.py       # GNN model trainer
 │   ├── data_loader.py       # Data loading and preprocessing
-│   ├── simulation.py        # (Optional) Engine for simulating learning processes
-│   ├── api_tests.py         # Unit tests and API validation
 │   └── requirements.txt     # List of dependencies
 └── .gitignore               # Git ignore file
 ```
@@ -42,55 +43,39 @@ First, clone the repository and install the required dependencies.
 git clone https://github.com/MuQY1818/DKG.git
 cd DKG
 pip install -r dkg_mvp/requirements.txt
+# Install extra dependencies for the API server
+pip install fastapi "uvicorn[standard]"
 ```
 
-### 2. Running the Example
+### 2. Prepare Model Files (First-time Run)
 
-Execute the `run_api_example.py` script in the project root to see a complete API workflow.
+Before starting the server, ensure you have generated the necessary model files.
+- **DKG Graph**: Running `python dkg_mvp/dkg_builder.py` will build and save the `dkg_skill_builder.graphml` file to the `models/` directory.
+- **GNN Embeddings**: Running `python dkg_mvp/gnn_trainer.py` will train the GNN and save the embedding vectors to the `models/embeddings/` directory.
+
+### 3. Start the API Server
+
+Execute the following command to start the backend API service:
 
 ```bash
-python run_api_example.py
+uvicorn api_server:app --reload
 ```
 
-The script will perform the following actions:
-- On the first run, it builds the DKG from the `skill_builder_data09-10.csv` dataset and saves it to the `models/` directory.
-- On subsequent runs, it loads the existing DKG from the file.
-- It then demonstrates:
-    1.  Fetching a student's knowledge profile before an interaction.
-    2.  Simulating a new learning interaction (e.g., the student answers a problem correctly).
-    3.  Fetching the student's updated profile to show the changes.
-    4.  Recommending the next problems for the student based on the new profile.
+After the server starts, open your browser and navigate to **`http://127.0.0.1:5000/docs`** to access the interactive API documentation, where you can test all endpoints directly.
 
 ## 🛠️ API Reference
 
-All core functionalities are exposed through the `dkg_mvp.dkg_builder.DKGBuilder` class. For detailed explanations and more examples, please refer to `DKG_API_使用指南.md`.
+All core functionalities are exposed through the FastAPI service. For detailed information about endpoints, parameters, and request/response formats, **it is highly recommended to consult the interactive API documentation directly**. The `DKG_API_使用指南.md` (in Chinese) provides a more workflow-oriented and conceptual explanation.
 
-### Initialization and Persistence
+### Key API Endpoint Overview
 
-- `DKGBuilder.build_from_data(log_data)`: Builds the graph from preprocessed data.
-- `builder.save_graph(path)`: Saves the in-memory graph to a file.
-- `DKGBuilder.load_graph(path)`: Loads the graph from a file.
-
-### Dynamic Updates
-
-- `builder.record_interaction(interaction: Dict)`: Records a single student interaction and updates the graph in real-time. The interaction dictionary must include `student_id`, `problem_id`, and `correct`.
-
-### Querying
-
-- `builder.get_student_profile(student_id: int)`: Retrieves a complete profile for a student, including their knowledge summary.
-- `builder.get_skill_details(skill_id: int)`: Gets details for a specific skill.
-- `builder.get_problem_details(problem_id: int)`: Gets details for a specific problem.
-
-### Recommendations and LLM Integration
-
-- `builder.recommend_next_problems(student_id: int)`: Recommends suitable practice problems based on the student's weaknesses.
-- `builder.generate_llm_prompt(...)`: Assembles a structured, informative prompt to be sent to an LLM for tasks like personalized learning path generation.
+- **`GET /api/status`**: Checks the health of the service.
+- **`GET /api/student/{student_id}/profile`**: Retrieves a complete student profile.
+- **`POST /api/interaction`**: Records a single student interaction to update the graph in real-time.
+- **`GET /api/problem/{problem_id}/similar`**: (GNN Feature) Finds similar problems.
+- **`GET /api/skill/{skill_id}/similar`**: (GNN Feature) Finds similar skills.
+- ...and more, please refer to the API documentation.
 
 ## 📊 Datasets
 
-The system currently primarily uses the **ASSISTments 2009-2010 Skill Builder** dataset, which contains rich log data of real student problem-solving activities.
-
-**Note:** The datasets are hosted via GitHub Releases. Please download them from the links below and place them in the `dataset/` directory before running the example script.
-
-- **[Download `skill_builder_data09-10.csv`](https://github.com/MuQY1818/DKG/releases/download/dataset/skill_builder_data09-10.csv)** (79.8 MB)
-- **[Download `assistments_2009_2010.csv`](https://github.com/MuQY1818/DKG/releases/download/dataset/assistments_2009_2010.csv)** (116 MB) 
+The system currently uses a public subset of the **ASSISTments 2009-2010 Skill Builder** dataset. The relevant data files are already included in the `dataset/clear_dataset` directory of this repository and do not require separate downloads. 
