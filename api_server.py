@@ -11,11 +11,14 @@ from sklearn.metrics.pairwise import cosine_similarity
 # 将项目根目录添加到sys.path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from dkg_mvp.dkg_builder import DKGBuilder
+from dkg_mvp.data_loader import DataLoader # 新增导入
 
 # --- 全局变量 ---
 MODELS_DIR = "models"
-DKG_SAVE_PATH = os.path.join(MODELS_DIR, "dkg_skill_builder.graphml")
+# DKG_SAVE_PATH 不再需要
 EMBEDDINGS_DIR = os.path.join(MODELS_DIR, "embeddings")
+# 新增数据集路径
+DATASET_DIR = "dataset"
 
 app = FastAPI(
     title="动态知识图谱 (DKG) API",
@@ -47,13 +50,25 @@ def startup_event():
     """在服务器启动时加载所有模型和数据"""
     print("--- 服务器启动中，正在加载模型... ---")
     
-    # 1. 加载DKG主图谱
-    if os.path.exists(DKG_SAVE_PATH):
-        print(f"从 {DKG_SAVE_PATH} 加载DKG...")
-        app.state.dkg_builder = DKGBuilder.load_graph(DKG_SAVE_PATH)
-        print("DKG加载完毕。")
-    else:
-        print(f"警告：找不到DKG模型文件: {DKG_SAVE_PATH}")
+    # 1. 实时构建DKG主图谱，不再从文件加载
+    print("实时构建DKG...")
+    try:
+        # 指向数据集根目录
+        loader = DataLoader(DATASET_DIR)
+        data_dict = loader.load_skill_builder_data()
+        
+        if data_dict:
+            builder = DKGBuilder()
+            builder.build_from_data(data_dict)
+            app.state.dkg_builder = builder
+            print(f"DKG实时构建完成，包含 {builder.graph.number_of_nodes()} 个节点和 {builder.graph.number_of_edges()} 条边。")
+        else:
+            print("错误：加载数据失败，无法构建DKG。")
+            app.state.dkg_builder = DKGBuilder() # 创建一个空的builder以避免崩溃
+
+    except Exception as e:
+        print(f"在构建DKG时发生严重错误: {e}")
+        # 在启动失败时创建一个空的builder实例，以允许服务启动并报告错误
         app.state.dkg_builder = DKGBuilder()
 
     # 2. 加载GNN生成的嵌入向量

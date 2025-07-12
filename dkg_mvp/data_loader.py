@@ -136,6 +136,9 @@ class DataLoader:
         # 清理不再需要的user_id列
         final_interactions.drop(columns=['user_id'], inplace=True)
 
+        # 终极修复：确保 problem_skill_matrix 的列名是整数类型，以匹配后续操作
+        problem_skill_matrix.columns = problem_skill_matrix.columns.astype(int)
+
         print(f"Finished loading and processing. Found:")
         print(f"  - {len(student_ids)} students")
         print(f"  - {len(problem_ids)} problems")

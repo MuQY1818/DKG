@@ -272,26 +272,28 @@ class DKGBuilder:
         """创建学生-技能掌握关系"""
         skill_mastery = self._compute_skill_mastery_direct(data)
         
-        student_map = data.get('student_map', {})
+        # 修正：不再需要 student_map 或 inv_student_map 来查找 student_id，
+        # 因为 skill_mastery 的索引已经是原始的 student_id。
         skill_map = data.get('skill_map', {})
-
-        if not student_map or not skill_map:
-            print("Warning: student_map or skill_map not found in data. Cannot create 'master' relations.")
+        if not skill_map:
+            print("Warning: skill_map not found in data. Cannot create 'master' relations.")
             return
-
-        inv_student_map = {v: k for k, v in student_map.items()}
+            
         inv_skill_map = {v: k for k, v in skill_map.items()}
 
-        for student_idx, row in skill_mastery.iterrows():
-            student_id = inv_student_map.get(student_idx)
-            if student_id is None:
-                continue
-
+        # 修正：iterrows() 的第一个元素 student_id 本身就是原始ID，不再是索引
+        for student_id, row in skill_mastery.iterrows():
+            # 这里的 student_id 就是我们需要的原始ID，例如 14
             for skill_idx, mastery_level in row.items():
-                skill_id = inv_skill_map.get(skill_idx)
+                # 终极修正：从DataFrame列名中获取的 skill_idx 是字符串，必须转为整数才能查询map
+                skill_id = inv_skill_map.get(int(skill_idx))
                 if skill_id is None:
                     continue
                 
+                # mastery_level 可能是 NaN，如果是则跳过
+                if pd.isna(mastery_level):
+                    continue
+
                 confidence = min(mastery_level * 1.2, 1.0)
 
                 self.graph.add_edge(
@@ -779,7 +781,15 @@ class DKGBuilder:
         # 确保列是整数类型以进行正确分组
         exploded_df['skill_indices'] = exploded_df['skill_indices'].astype(int)
         
-        skill_mastery = exploded_df.groupby(['student_id_idx', 'skill_indices'])['correct'].mean().unstack(fill_value=0.0)
+        # 修正：分组时使用原始的 student_id，因为后续步骤需要它作为索引
+        # 我们需要确保 'student_id' 列在 exploded_df 中存在
+        if 'student_id' not in exploded_df.columns:
+            # 如果不存在，需要从 data['interactions'] 重新合并进来
+            # 但更简单的方法是确保它在 data_loader 中一直被传递下来
+            print("FATAL: 'student_id' column is missing for mastery computation.")
+            return pd.DataFrame()
+
+        skill_mastery = exploded_df.groupby(['student_id', 'skill_indices'])['correct'].mean().unstack(fill_value=0.0)
         
         return skill_mastery
 
@@ -895,11 +905,38 @@ class DKGBuilder:
         return prompt.strip()
 
 def main():
-    """主函数入口，用于运行学习路径模拟"""
-    run_real_data_simulation()
+    """主函数，用于演示和测试"""
+    # run_autonomous_simulation()
+
+    # --- 新增：直接构建和保存DKG ---
+    print("Starting DKG build process from real data...")
+    # 延迟导入以避免循环依赖
+    from dkg_mvp.data_loader import DataLoader
+
+    # 1. 加载数据
+    # 指定数据集的根目录 (修正：只到 "dataset" 这一级)
+    dataset_root = os.path.join(os.path.dirname(__file__), '..', 'dataset')
+    loader = DataLoader(dataset_root)
+    # 加载我们正在使用的数据集
+    data_dict = loader.load_skill_builder_data('skill_builder_data_filter15.csv')
+
+    # 修正：检查 data_dict 是否为 None
+    if data_dict and not data_dict.get('interactions', pd.DataFrame()).empty:
+        # 2. 构建DKG
+        builder = DKGBuilder()
+        dkg = builder.build_from_data(data_dict)
+        print(f"DKG built successfully with {dkg.number_of_nodes()} nodes and {dkg.number_of_edges()} edges.")
+        
+        # 3. 保存图谱
+        # 将图谱保存在项目根目录
+        save_path = os.path.join(os.path.dirname(__file__), '..', 'dkg.gml')
+        builder.save_graph(save_path)
+    else:
+        print("Failed to load data. DKG build process aborted.")
+    # --- 结束新增代码 ---
 
 def run_autonomous_simulation():
-    """运行最终的、基于自主学习智能体的模拟。"""
+    """运行一个完全自主的智能体学习模拟，并可视化其学习过程。"""
     from .simulation import SimulationEngine
     from .interactive_visualization import InteractiveDKGVisualizer
     import os
@@ -1000,7 +1037,4 @@ def run_real_data_simulation():
 
 
 if __name__ == "__main__":
-    # 运行最终的自主学习智能体模拟
-    run_autonomous_simulation()
-    # 如果需要运行真实数据模拟，可以取消下面的注释
-    # run_real_data_simulation()
+    main()
