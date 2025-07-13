@@ -14,6 +14,7 @@ import torch
 import numpy as np
 import ngrok
 from dotenv import load_dotenv
+import math
 
 # 将项目根目录添加到sys.path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -218,6 +219,19 @@ class LLMPromptResponse(BaseModel):
 
 
 # --- 辅助函数 ---
+def clean_json_data(data: Any) -> Any:
+    """
+    递归地清洗数据结构，使其与JSON兼容。
+    将 NaN, Infinity, -Infinity 替换为 None。
+    """
+    if isinstance(data, dict):
+        return {k: clean_json_data(v) for k, v in data.items()}
+    if isinstance(data, list):
+        return [clean_json_data(item) for item in data]
+    if isinstance(data, float) and (math.isnan(data) or math.isinf(data)):
+        return None
+    return data
+
 def _run_prediction(student_ids: List[int], problem_ids: List[int]) -> torch.Tensor:
     """
     内部辅助函数，用于运行模型预测。
@@ -460,7 +474,8 @@ def get_all_question_analytics():
     """获取所有问题的预计算分析画像。"""
     if not app.state.analytics_data:
         raise HTTPException(status_code=404, detail="分析数据未加载。")
-    return app.state.analytics_data.get("questions", {})
+    questions_data = app.state.analytics_data.get("questions", {})
+    return clean_json_data(questions_data)
 
 @app.get("/api/analytics/question/{question_id}", response_model=QuestionAnalyticsResponse, tags=["学习分析"])
 def get_question_analytics(question_id: int):
@@ -472,14 +487,15 @@ def get_question_analytics(question_id: int):
     analytics = app.state.analytics_data.get("questions", {}).get(str(question_id))
     if not analytics:
         raise HTTPException(status_code=404, detail=f"找不到ID为 {question_id} 的问题的分析数据。")
-    return analytics
+    return clean_json_data(analytics)
 
 @app.get("/api/analytics/students", response_model=Dict[str, StudentAnalyticsResponse], tags=["学习分析"])
 def get_all_student_analytics():
     """获取所有学生的预计算行为分析。"""
     if not app.state.analytics_data:
         raise HTTPException(status_code=404, detail="分析数据未加载。")
-    return app.state.analytics_data.get("students", {})
+    students_data = app.state.analytics_data.get("students", {})
+    return clean_json_data(students_data)
 
 @app.get("/api/analytics/student/{student_id}", response_model=StudentAnalyticsResponse, tags=["学习分析"])
 def get_student_analytics(student_id: int):
@@ -490,7 +506,7 @@ def get_student_analytics(student_id: int):
     analytics = app.state.analytics_data.get("students", {}).get(str(student_id))
     if not analytics:
         raise HTTPException(status_code=404, detail=f"找不到ID为 {student_id} 的学生的分析数据。")
-    return analytics
+    return clean_json_data(analytics)
 
 @app.get("/api/analytics/student/{student_id}/learning_velocity/{skill_id}", response_model=LearningVelocityResponse, tags=["学习分析"])
 def get_learning_velocity(student_id: int, skill_id: int):
