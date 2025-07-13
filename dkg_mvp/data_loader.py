@@ -23,6 +23,7 @@ class DataLoader:
         
         self.clear_dataset_path = os.path.join(self.base_dir, 'clear_dataset')
         self.processed_data_dir = os.path.join(self.base_dir, 'processed')
+        self.data_file_path = None # 将在这里存储被加载的数据文件名
         os.makedirs(self.processed_data_dir, exist_ok=True)
     
     def load_skill_builder_data(self, interaction_file: str = 'skill_builder_data_filter15.csv', nrows: Optional[int] = None) -> Optional[Dict]:
@@ -43,6 +44,7 @@ class DataLoader:
         
         # 定义文件路径
         interactions_path = os.path.join(self.clear_dataset_path, interaction_file)
+        self.data_file_path = interactions_path # 存储文件路径
         problems_path = os.path.join(self.clear_dataset_path, 'builder_problem.csv')
         skills_path = os.path.join(self.clear_dataset_path, 'builder_skill.csv')
 
