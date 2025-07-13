@@ -1,0 +1,261 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script src="lib/bindings/utils.js"></script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 100%;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+             #loadingBar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width: 100%;
+                 height: 100%;
+                 background-color:rgba(200,200,200,0.8);
+                 -webkit-transition: all 0.5s ease;
+                 -moz-transition: all 0.5s ease;
+                 -ms-transition: all 0.5s ease;
+                 -o-transition: all 0.5s ease;
+                 transition: all 0.5s ease;
+                 opacity:1;
+             }
+
+             #bar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width:20px;
+                 height:20px;
+                 margin:auto auto auto auto;
+                 border-radius:11px;
+                 border:2px solid rgba(30,30,30,0.05);
+                 background: rgb(0, 173, 246); /* Old browsers */
+                 box-shadow: 2px 0px 4px rgba(0,0,0,0.4);
+             }
+
+             #border {
+                 position:absolute;
+                 top:10px;
+                 left:10px;
+                 width:500px;
+                 height:23px;
+                 margin:auto auto auto auto;
+                 box-shadow: 0px 0px 4px rgba(0,0,0,0.2);
+                 border-radius:10px;
+             }
+
+             #text {
+                 position:absolute;
+                 top:8px;
+                 left:530px;
+                 width:30px;
+                 height:50px;
+                 margin:auto auto auto auto;
+                 font-size:22px;
+                 color: #000000;
+             }
+
+             div.outerBorder {
+                 position:relative;
+                 top:400px;
+                 width:600px;
+                 height:44px;
+                 margin:auto auto auto auto;
+                 border:8px solid rgba(0,0,0,0.1);
+                 background: rgb(252,252,252); /* Old browsers */
+                 background: -moz-linear-gradient(top,  rgba(252,252,252,1) 0%, rgba(237,237,237,1) 100%); /* FF3.6+ */
+                 background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(252,252,252,1)), color-stop(100%,rgba(237,237,237,1))); /* Chrome,Safari4+ */
+                 background: -webkit-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Chrome10+,Safari5.1+ */
+                 background: -o-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Opera 11.10+ */
+                 background: -ms-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* IE10+ */
+                 background: linear-gradient(to bottom,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* W3C */
+                 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#fcfcfc', endColorstr='#ededed',GradientType=0 ); /* IE6-9 */
+                 border-radius:72px;
+                 box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+             }
+             
+
+             
+
+             
+        </style>
+    
+                    <style>
+                        html, body {
+                            margin: 0;
+                            padding: 0;
+                        }
+                        #mynetwork {
+                            width: 100vw;
+                            height: 100vh;
+                        }
+                    </style>
+                    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+            <div id="loadingBar">
+              <div class="outerBorder">
+                <div id="text">0%</div>
+                <div id="border">
+                  <div id="bar"></div>
+                </div>
+              </div>
+            </div>
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#636EFA", "font": {"color": "#333"}, "id": "student_2", "label": "\u5b66\u751f 2", "shape": "dot", "size": 25, "title": "ID: 2"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_1", "label": "Box and Whisker", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 1"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_2", "label": "Circle Graph", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 2"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_3", "label": "Histogram as Table or Graph", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 3"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_4", "label": "Number Line", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 4"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_5", "label": "Scatter Plot", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 5"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_6", "label": "Stem and Leaf Plot", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 6"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_7", "label": "Table", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 7"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_8", "label": "Venn Diagram", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 8"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_9", "label": "Mean", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 9"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_10", "label": "Median", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 10"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_11", "label": "Mode", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 11"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_12", "label": "Range", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 12"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_13", "label": "Counting Methods", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 13"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_14", "label": "Probability of Two Distinct Events", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 14"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_15", "label": "Probability of a Single Event", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 15"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_16", "label": "Interior Angles Figures with More than 3 Sides", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 16"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_17", "label": "Interior Angles Triangle", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 17"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_18", "label": "Congruence", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 18"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_19", "label": "Complementary and Supplementary Angles", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 19"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_20", "label": "Angles on Parallel Lines Cut by a Transversal", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 20"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_21", "label": "Pythagorean Theorem", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 21"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_22", "label": "Nets of 3D Figures", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 22"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_23", "label": "Unit Conversion Within a System", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 23"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_24", "label": "Effect of Changing Dimensions of a Shape Prportionally", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 24"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_25", "label": "Area Circle", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 25"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_26", "label": "Circumference ", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 26"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_27", "label": "Perimeter of a Polygon", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 27"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_28", "label": "Reading a Ruler or Scale", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 28"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_29", "label": "Calculations with Similar Figures", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 29"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_30", "label": "Conversion of Fraction Decimals Percents", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 30"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_31", "label": "Equivalent Fractions", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 31"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_32", "label": "Ordering Positive Decimals", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 32"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_33", "label": "Ordering Fractions", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 33"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_34", "label": "Ordering Integers", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 34"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_35", "label": "Ordering Real Numbers", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 35"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_36", "label": "Rounding", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 36"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_37", "label": "Addition Whole Numbers", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 37"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_38", "label": "Division Fractions", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 38"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_39", "label": "Estimation", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 39"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_40", "label": "Fraction Of", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 40"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_41", "label": "Least Common Multiple", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 41"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_42", "label": "Multiplication Fractions", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 42"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_43", "label": "Multiplication Whole Numbers", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 43"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_44", "label": "Percent Of", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 44"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_45", "label": "Subtraction Whole Numbers", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 45"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_46", "label": "Square Root", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 46"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_47", "label": "Finding Percents", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 47"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_48", "label": "Proportion", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 48"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_49", "label": "Scale Factor", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 49"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_50", "label": "Unit Rate", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 50"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_51", "label": "Scientific Notation", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 51"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_52", "label": "Divisibility Rules", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 52"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_53", "label": "Prime Number", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 53"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_54", "label": "Absolute Value", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 54"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_55", "label": "Exponents", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 55"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_56", "label": "Pattern Finding ", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 56"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_57", "label": "D.4.8-understanding-concept-of-probabilities", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 57"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_58", "label": "Absolute Value", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 58"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_59", "label": "Algebraic Simplification", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 59"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_60", "label": "Algebraic Solving", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 60"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_61", "label": "Choose an Equation from Given Information", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 61"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_62", "label": "Intercept", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 62"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_63", "label": "Linear Equations", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 63"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_64", "label": "Percent Discount", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 64"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_65", "label": "Percents", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 65"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_66", "label": "Rate", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 66"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_67", "label": "Slope", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 67"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_68", "label": "Multiplication and Division Positive Decimals", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 68"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_69", "label": "Addition and Subtraction Integers", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 69"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_70", "label": "Addition and Subtraction Positive Decimals", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 70"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_71", "label": "Multiplication and Division Integers", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 71"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_72", "label": "Addition and Subtraction Fractions", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 72"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_73", "label": "Reflection", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 73"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_74", "label": "Rotations", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 74"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_75", "label": "Translations", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 75"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_76", "label": "Area Irregular Figure", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 76"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_77", "label": "Area Parallelogram", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 77"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_78", "label": "Area Rectangle", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 78"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_79", "label": "Area Trapezoid", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 79"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_80", "label": "Area Triangle", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 80"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_81", "label": "Surface Area Cylinder", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 81"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_82", "label": "Surface Area Rectangular Prism", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 82"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_83", "label": "Volume Cylinder", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 83"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_84", "label": "Volume Rectangular Prism", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 84"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_85", "label": "Volume Sphere", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 85"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_86", "label": "Order of Operations +,-,/,* () positive reals", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 86"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_87", "label": "Order of Operations All", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 87"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_88", "label": "Equation Solving Two or Fewer Steps", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 88"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_89", "label": "Equation Solving More Than Two Steps", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 89"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_90", "label": "Angles - Obtuse, Acute, and Right", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 90"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_91", "label": "Greatest Common Factor", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 91"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_92", "label": "Computation with Real Numbers", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 92"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_93", "label": "Write Linear Equation from Ordered Pairs", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 93"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_94", "label": "Write Linear Equation from Situation", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 94"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_95", "label": "Recognize Linear Pattern", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 95"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_96", "label": "Write Linear Equation from Graph", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 96"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_97", "label": "Finding Slope From Situation", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 97"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_98", "label": "Finding Slope From Equation", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 98"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_99", "label": "Finding Slope from Ordered Pairs", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 99"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_100", "label": "Distributive Property", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 100"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_101", "label": "Midpoint", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 101"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_102", "label": "Polynomial Factors", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 102"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_103", "label": "Recognize Quadratic Pattern", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 103"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_104", "label": "Solving Systems of Linear Equations", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 104"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_105", "label": "Quadratic Formula to Solve Quadratic Equation", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 105"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_106", "label": "Parts of a Polyomial, Terms, Coefficient, Monomial, Exponent, Variable", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 106"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_107", "label": "Interpreting Coordinate Graphs ", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 107"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_108", "label": "Solving for a variable", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 108"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_109", "label": "Simplifying Expressions positive exponents", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 109"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_110", "label": "Solving Inequalities", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 110"}, {"color": "#00CC96", "font": {"color": "#333"}, "id": "skill_111", "label": "Solving Systems of Linear Equations by Graphing", "shape": "dot", "size": 15, "title": "\u6280\u80fdID: 111"}, {"color": "#EF553B", "font": {"color": "#333"}, "id": "problem_13350", "label": "\u9898\u76ee 13350", "shape": "dot", "size": 10, "title": "\u9898\u76eeID: 13350"}, {"color": "#EF553B", "font": {"color": "#333"}, "id": "problem_13382", "label": "\u9898\u76ee 13382", "shape": "dot", "size": 10, "title": "\u9898\u76eeID: 13382"}, {"color": "#EF553B", "font": {"color": "#333"}, "id": "problem_13266", "label": "\u9898\u76ee 13266", "shape": "dot", "size": 10, "title": "\u9898\u76eeID: 13266"}, {"color": "#EF553B", "font": {"color": "#333"}, "id": "problem_13361", "label": "\u9898\u76ee 13361", "shape": "dot", "size": 10, "title": "\u9898\u76eeID: 13361"}, {"color": "#EF553B", "font": {"color": "#333"}, "id": "problem_13937", "label": "\u9898\u76ee 13937", "shape": "dot", "size": 10, "title": "\u9898\u76eeID: 13937"}, {"color": "#EF553B", "font": {"color": "#333"}, "id": "problem_13912", "label": "\u9898\u76ee 13912", "shape": "dot", "size": 10, "title": "\u9898\u76eeID: 13912"}]);
+                  edges = new vis.DataSet([{"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_1", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_2", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_3", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_4", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_5", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_6", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_7", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_8", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_9", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_10", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_11", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_12", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_13", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_14", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_15", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_16", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_17", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_18", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_19", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_20", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_21", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_22", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_23", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_24", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_25", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_26", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_27", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_28", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_29", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_30", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_31", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_32", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_33", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_34", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_35", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_36", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_37", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_38", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_39", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_40", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_41", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_42", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_43", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_44", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_45", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_46", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_47", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_48", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_49", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_50", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_51", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_52", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_53", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_54", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_55", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_56", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_57", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_58", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_59", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_60", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_61", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_62", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_63", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_64", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_65", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_66", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_67", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_68", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_69", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_70", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_71", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_72", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_73", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_74", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_75", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_76", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_77", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_78", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_79", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_80", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_81", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_82", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_83", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_84", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_85", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_86", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_87", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.75", "to": "skill_88", "width": 2.5}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 1.00", "to": "skill_89", "width": 3.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_90", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_91", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_92", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_93", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_94", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_95", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_96", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_97", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_98", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_99", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_100", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_101", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_102", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_103", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_104", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_105", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_106", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_107", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_108", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_109", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_110", "width": 1.0}, {"arrows": "to", "color": "#FFA15A", "dashes": true, "from": "student_2", "title": "\u6700\u7ec8\u638c\u63e1\u5ea6: 0.00", "to": "skill_111", "width": 1.0}, {"arrows": "to", "color": "#EF553B", "from": "student_2", "title": "\u89e3\u9898: \u9519\u8bef", "to": "problem_13350", "width": 2}, {"arrows": "to", "color": "#AB63FA", "from": "problem_13350", "title": "\u8981\u6c42\u6280\u80fd", "to": "skill_88", "width": 1}, {"arrows": "to", "color": "#00CC96", "from": "student_2", "title": "\u89e3\u9898: \u6b63\u786e", "to": "problem_13382", "width": 2}, {"arrows": "to", "color": "#AB63FA", "from": "problem_13382", "title": "\u8981\u6c42\u6280\u80fd", "to": "skill_88", "width": 1}, {"arrows": "to", "color": "#00CC96", "from": "student_2", "title": "\u89e3\u9898: \u6b63\u786e", "to": "problem_13266", "width": 2}, {"arrows": "to", "color": "#AB63FA", "from": "problem_13266", "title": "\u8981\u6c42\u6280\u80fd", "to": "skill_88", "width": 1}, {"arrows": "to", "color": "#00CC96", "from": "student_2", "title": "\u89e3\u9898: \u6b63\u786e", "to": "problem_13361", "width": 2}, {"arrows": "to", "color": "#AB63FA", "from": "problem_13361", "title": "\u8981\u6c42\u6280\u80fd", "to": "skill_88", "width": 1}, {"arrows": "to", "color": "#00CC96", "from": "student_2", "title": "\u89e3\u9898: \u6b63\u786e", "to": "problem_13937", "width": 2}, {"arrows": "to", "color": "#AB63FA", "from": "problem_13937", "title": "\u8981\u6c42\u6280\u80fd", "to": "skill_89", "width": 1}, {"arrows": "to", "color": "#00CC96", "from": "student_2", "title": "\u89e3\u9898: \u6b63\u786e", "to": "problem_13912", "width": 2}, {"arrows": "to", "color": "#AB63FA", "from": "problem_13912", "title": "\u8981\u6c42\u6280\u80fd", "to": "skill_89", "width": 1}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+                      network.on("stabilizationProgress", function(params) {
+                          document.getElementById('loadingBar').removeAttribute("style");
+                          var maxWidth = 496;
+                          var minWidth = 20;
+                          var widthFactor = params.iterations/params.total;
+                          var width = Math.max(minWidth,maxWidth * widthFactor);
+                          document.getElementById('bar').style.width = width + 'px';
+                          document.getElementById('text').innerHTML = Math.round(widthFactor*100) + '%';
+                      });
+                      network.once("stabilizationIterationsDone", function() {
+                          document.getElementById('text').innerHTML = '100%';
+                          document.getElementById('bar').style.width = '496px';
+                          document.getElementById('loadingBar').style.opacity = 0;
+                          // really clean the dom element
+                          setTimeout(function () {document.getElementById('loadingBar').style.display = 'none';}, 500);
+                      });
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>

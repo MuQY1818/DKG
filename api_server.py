@@ -2,195 +2,323 @@ import os
 import sys
 import uvicorn
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
-import pandas as pd
+
+import torch
 import numpy as np
-from sklearn.metrics.pairwise import cosine_similarity
 
 # 将项目根目录添加到sys.path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from dkg_mvp.dkg_builder import DKGBuilder
-from dkg_mvp.data_loader import DataLoader # 新增导入
+from dkg_mvp.data_loader import DataLoader
+from dkg_mvp.orcdf.model import ORCDF
+from dkg_mvp.train_orcdf import to_sparse_tensor
 
 # --- 全局变量 ---
 MODELS_DIR = "models"
-DKG_SAVE_PATH = "dkg.pkl" # 使用新的 pickle 文件路径
-EMBEDDINGS_DIR = os.path.join(MODELS_DIR, "embeddings")
-# DATASET_DIR 不再需要在API服务器中定义
+MODEL_NAME = "orcdf_best_model_seed42.pt" # 训练好的模型文件名
+MODEL_PATH = os.path.join(MODELS_DIR, MODEL_NAME)
 
 app = FastAPI(
-    title="动态知识图谱 (DKG) API",
-    description="用于学生建模的动态知识图谱API，集成了GNN嵌入相似度查询功能。",
-    version="1.1.0",
+    title="ORCDF 认知诊断 API",
+    description="基于ORCDF（抗过平滑认知诊断框架）的API，用于预测学生的答题表现。",
+    version="2.0.0",
 )
 
-# 使用一个字典来管理全局资源，而不是多个全局变量
-app.state.dkg_builder = None
-app.state.student_embeddings = None
-app.state.problem_embeddings = None
-app.state.skill_embeddings = None
+# 使用 app.state 来管理全局资源
+# app.state.model
+# app.state.data_matrices (a, ia, q)
+# app.state.id_maps (student, problem)
+# app.state.device
 
 # --- Pydantic 模型定义 ---
-class Interaction(BaseModel):
+class PredictionRequest(BaseModel):
+    student_id: int = Field(..., description="学生的原始ID")
+    problem_id: int = Field(..., description="练习的原始ID")
+
+class PredictionResponse(BaseModel):
     student_id: int
     problem_id: int
-    correct: int
-    score: Optional[float] = None
-    time_taken: Optional[int] = None
-    
-class Embedding(BaseModel):
-    id: int
-    vector: List[float]
+    predicted_correct_probability: float = Field(..., description="模型预测的答对概率")
+
+class SkillMastery(BaseModel):
+    skill_id: int
+    skill_name: str
+    predicted_mastery: float = Field(..., description="对该技能的预测掌握度（平均答对率）")
+
+class StudentProfileResponse(BaseModel):
+    student_id: int
+    skill_mastery_profile: List[SkillMastery] = Field(..., description="按掌握度从低到高排序的技能列表")
+
+class RecommendedProblem(BaseModel):
+    problem_id: int
+    predicted_success_rate: float
+    problem_text: Optional[str] = None
+
+class RecommendationResponse(BaseModel):
+    student_id: int
+    recommended_for_skill_id: int
+    recommended_for_skill_name: str
+    recommendations: List[RecommendedProblem]
 
 # --- 事件处理器 ---
 @app.on_event("startup")
 def startup_event():
-    """在服务器启动时加载所有模型和数据"""
-    print("--- 服务器启动中，正在加载模型... ---")
+    """在服务器启动时加载模型和所需数据"""
+    print("--- 服务器启动中，正在加载ORCDF模型及数据... ---")
     
-    # 1. 从 pickle 文件加载 DKG
-    print(f"从 {DKG_SAVE_PATH} 加载 DKG 实例...")
-    app.state.dkg_builder = DKGBuilder.load_with_pickle(DKG_SAVE_PATH)
+    app.state.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"使用设备: {app.state.device}")
 
-    # 如果加载失败，则服务将处于非活动状态，但不会崩溃
-    if app.state.dkg_builder is None:
-        print(f"警告：无法从 {DKG_SAVE_PATH} 加载 DKG。服务将以无图谱状态启动。")
-        print("请先成功运行 dkg_builder.py 来生成 dkg.pkl 文件。")
-        app.state.dkg_builder = DKGBuilder() # 创建一个空实例以防崩溃
-    else:
-        print("DKG 实例加载完毕。")
+    # 1. 加载数据以获取矩阵和ID映射
+    print("加载数据以构建图矩阵和ID映射...")
+    project_root = os.path.dirname(os.path.abspath(__file__))
+    dataset_path = os.path.join(project_root, 'dataset')
+    
+    loader = DataLoader(dataset_path)
+    # 加载完整数据以构建完整的图
+    data = loader.load_orcdf_data() 
+    if not data:
+        print("错误：无法加载数据，服务无法启动。")
+        # 在实际应用中，这里应该有更健壮的错误处理
+        return
 
-    # 2. 加载GNN生成的嵌入向量
-    try:
-        print("正在加载GNN嵌入向量...")
-        app.state.student_embeddings = pd.read_csv(os.path.join(EMBEDDINGS_DIR, "student_embeddings.csv"), index_col=0)
-        app.state.problem_embeddings = pd.read_csv(os.path.join(EMBEDDINGS_DIR, "problem_embeddings.csv"), index_col=0)
-        app.state.skill_embeddings = pd.read_csv(os.path.join(EMBEDDINGS_DIR, "skill_embeddings.csv"), index_col=0)
+    app.state.id_maps = {
+        "student": data['student_map'],
+        "problem": data['problem_map'],
+        "skill": data['skill_map'], # This is {raw_id: index}
+        "skill_idx_to_name": data['skills'],
+        # Correctly named maps
+        "skill_id_to_idx": data['skill_map'], # Direct mapping: {skill_id: skill_idx}
+        "skill_idx_to_id": {v: k for k, v in data['skill_map'].items()} # Reverse mapping: {skill_idx: skill_id}
+    }
+    app.state.problem_descriptions = data['problem_descriptions']
+    
+    # 将矩阵转换为稀疏张量并存储
+    app.state.data_matrices = {
+        "a_matrix": to_sparse_tensor(data['a_matrix'], app.state.device),
+        "ia_matrix": to_sparse_tensor(data['ia_matrix'], app.state.device),
+        "q_matrix": to_sparse_tensor(data['q_matrix'], app.state.device),
+    }
+    print("数据矩阵和ID映射加载完毕。")
+
+    # 2. 加载训练好的ORCDF模型
+    if not os.path.exists(MODEL_PATH):
+        print(f"错误: 在 '{MODEL_PATH}' 找不到模型文件。请先运行 train_orcdf.py 进行训练。")
+        return
         
-        # 为索引命名，以便后续操作
-        app.state.student_embeddings.index.name = 'id'
-        app.state.problem_embeddings.index.name = 'id'
-        app.state.skill_embeddings.index.name = 'id'
-
-        print("所有嵌入向量加载完毕。")
-    except FileNotFoundError:
-        print(f"警告：在 {EMBEDDINGS_DIR} 中找不到嵌入文件。相似度查询API将不可用。")
-        print("请先运行 gnn_trainer.py 来生成嵌入文件。")
-
+    print(f"从 {MODEL_PATH} 加载 ORCDF 模型...")
+    # 注意：这里的超参数需要与训练时使用的相匹配
+    model = ORCDF(
+        num_students=data['num_students'],
+        num_problems=data['num_problems'],
+        num_skills=data['num_skills'],
+        embed_dim=64, # 需与训练时一致
+        num_layers=2  # 需与训练时一致
+    ).to(app.state.device)
+    
+    model.load_state_dict(torch.load(MODEL_PATH, map_location=app.state.device))
+    model.eval() # 设置为评估模式
+    
+    app.state.model = model
+    print("ORCDF 模型加载成功。")
     print("--- 服务器启动完成 ---")
 
 # --- 辅助函数 ---
-def get_builder() -> DKGBuilder:
-    """依赖注入函数，用于获取DKG实例"""
-    builder = app.state.dkg_builder
-    if builder is None or builder.graph.number_of_nodes() == 0:
-        raise HTTPException(status_code=503, detail="DKG服务当前不可用，模型未加载。")
-    return builder
-
-def find_similar_items(item_id: int, embeddings_df: pd.DataFrame, top_n: int = 5) -> List[Dict[str, Any]]:
-    """通用的相似度计算函数"""
-    if embeddings_df is None:
-        raise HTTPException(status_code=501, detail="嵌入向量未加载，该功能不可用。")
-    if item_id not in embeddings_df.index:
-        raise HTTPException(status_code=404, detail=f"ID {item_id} 的嵌入向量不存在。")
-        
-    item_vec = embeddings_df.loc[[item_id]]
-    similarities = cosine_similarity(item_vec, embeddings_df)
+def _run_prediction(student_ids: List[int], problem_ids: List[int]) -> torch.Tensor:
+    """
+    内部辅助函数，用于运行模型预测。
+    接收内部索引ID列表。
+    """
+    model = app.state.model
+    device = app.state.device
     
-    # 获取最相似的 top_n+1 个结果（包含自身）
-    similar_indices = np.argsort(similarities[0])[::-1][1:top_n+1]
+    student_tensor = torch.LongTensor(student_ids).to(device)
+    problem_tensor = torch.LongTensor(problem_ids).to(device)
     
-    results = []
-    for i in similar_indices:
-        sim_id = embeddings_df.index[i]
-        sim_score = similarities[0][i]
-        results.append({"similar_id": int(sim_id), "similarity_score": float(sim_score)})
-        
-    return results
+    with torch.no_grad():
+        preds = model(
+            student_tensor,
+            problem_tensor,
+            app.state.data_matrices['a_matrix'],
+            app.state.data_matrices['ia_matrix'],
+            app.state.data_matrices['q_matrix']
+        )
+    return preds
 
 # --- API Endpoints ---
-
 @app.get("/", tags=["通用"])
 def read_root():
     """欢迎信息和API文档链接"""
     return {
-        "message": "欢迎使用DKG API",
+        "message": "欢迎使用 ORCDF 认知诊断 API",
         "documentation_url": "/docs"
     }
 
 @app.get("/api/status", tags=["通用"])
 def get_status():
-    """检查API服务和DKG的状态"""
-    builder = get_builder()
+    """检查API服务和模型的状态"""
+    model_loaded = hasattr(app.state, 'model') and app.state.model is not None
+    data_loaded = hasattr(app.state, 'data_matrices') and app.state.data_matrices is not None
     return {
-        "status": "ok",
-        "message": "DKG服务正在运行。",
-        "graph_stats": {
-            "nodes": builder.graph.number_of_nodes(),
-            "edges": builder.graph.number_of_edges()
-        },
-        "embeddings_loaded": {
-            "student": app.state.student_embeddings is not None,
-            "problem": app.state.problem_embeddings is not None,
-            "skill": app.state.skill_embeddings is not None,
-        }
+        "status": "ok" if model_loaded and data_loaded else "error",
+        "message": "服务正在运行。" if model_loaded and data_loaded else "服务遇到问题，模型或数据未加载。",
+        "model_loaded": model_loaded,
+        "data_loaded": data_loaded,
+        "device": str(app.state.device) if hasattr(app.state, 'device') else "N/A"
     }
 
-# ... (其他 DKG API 端点) ...
-@app.get("/api/student/{student_id}/profile", tags=["DKG查询"])
-def get_student_profile_route(student_id: int):
-    """获取学生画像"""
-    builder = get_builder()
-    profile = builder.get_student_profile(student_id)
-    if "error" in profile:
-        raise HTTPException(status_code=404, detail=profile["error"])
-    return profile
+@app.post("/api/predict", response_model=List[PredictionResponse], tags=["核心功能"])
+def predict_correctness(requests: List[PredictionRequest]):
+    """
+    预测一个或多个学生-练习交互的答对概率。
+    """
+    if not hasattr(app.state, 'model') or app.state.model is None:
+        raise HTTPException(status_code=503, detail="模型当前不可用，请稍后重试。")
 
-@app.get("/api/skill/{skill_id}/details", tags=["DKG查询"])
-def get_skill_details_route(skill_id: int):
-    """获取技能详情"""
-    builder = get_builder()
-    details = builder.get_skill_details(skill_id)
-    if "error" in details:
-        raise HTTPException(status_code=404, detail=details["error"])
-    return details
+    student_map = app.state.id_maps['student']
+    problem_map = app.state.id_maps['problem']
+    
+    batch_student_ids = []
+    batch_problem_ids = []
+    
+    # 验证ID并转换为内部索引
+    for req in requests:
+        if req.student_id not in student_map:
+            raise HTTPException(status_code=404, detail=f"学生ID {req.student_id} 不存在。")
+        if req.problem_id not in problem_map:
+            raise HTTPException(status_code=404, detail=f"练习ID {req.problem_id} 不存在。")
+        
+        batch_student_ids.append(student_map[req.student_id])
+        batch_problem_ids.append(problem_map[req.problem_id])
 
-@app.get("/api/problem/{problem_id}/details", tags=["DKG查询"])
-def get_problem_details_route(problem_id: int):
-    """获取题目详情"""
-    builder = get_builder()
-    details = builder.get_problem_details(problem_id)
-    if "error" in details:
-        raise HTTPException(status_code=404, detail=details["error"])
-    return details
+    # 准备模型输入
+    preds = _run_prediction(batch_student_ids, batch_problem_ids)
+    
+    # 格式化响应
+    responses = []
+    for i, req in enumerate(requests):
+        prob = preds[i].item() if torch.is_tensor(preds) and preds.ndim > 0 else preds.item()
+        responses.append(
+            PredictionResponse(
+                student_id=req.student_id,
+                problem_id=req.problem_id,
+                predicted_correct_probability=prob
+            )
+        )
+        
+    return responses
 
-@app.get("/api/student/{student_id}/recommendations", tags=["DKG查询"])
-def get_recommendations_route(student_id: int, count: int = 5):
-    """获取题目推荐"""
-    builder = get_builder()
-    recommendations = builder.recommend_next_problems(student_id, count)
-    return recommendations
+@app.get("/api/student/{student_id}/profile", response_model=StudentProfileResponse, tags=["核心功能"])
+def get_student_profile(student_id: int):
+    """
+    获取学生的完整知识画像，即对所有技能的预测掌握度。
+    """
+    if not hasattr(app.state, 'model'):
+        raise HTTPException(status_code=503, detail="模型当前不可用")
+    if student_id not in app.state.id_maps['student']:
+        raise HTTPException(status_code=404, detail=f"学生ID {student_id} 不存在。")
 
-@app.post("/api/interaction", status_code=201, tags=["DKG更新"])
-def record_interaction_route(interaction: Interaction):
-    """记录一次新的交互"""
-    builder = get_builder()
-    interaction_dict = interaction.dict()
-    interaction_dict['timestamp'] = pd.Timestamp.now()
-    builder.record_interaction(interaction_dict)
-    return {"status": "success", "message": "交互已成功记录。"}
+    student_idx = app.state.id_maps['student'][student_id]
+    skill_idx_to_name = app.state.id_maps['skill_idx_to_name']
+    q_matrix_np = app.state.data_matrices['q_matrix'].to_dense().cpu().numpy()
 
-# --- GNN 嵌入相似度查询 API ---
-@app.get("/api/problem/{problem_id}/similar", tags=["GNN相似度查询"])
-def get_similar_problems(problem_id: int, top_n: int = 5):
-    """根据GNN嵌入查找相似的题目"""
-    return find_similar_items(problem_id, app.state.problem_embeddings, top_n)
+    mastery_profile = []
+    
+    skill_idx_to_id_map = app.state.id_maps['skill_idx_to_id']
 
-@app.get("/api/skill/{skill_id}/similar", tags=["GNN相似度查询"])
-def get_similar_skills(skill_id: int, top_n: int = 5):
-    """根据GNN嵌入查找相似的技能"""
-    return find_similar_items(skill_id, app.state.skill_embeddings, top_n)
+    for skill_idx, skill_name in skill_idx_to_name.items():
+        problem_indices = np.where(q_matrix_np[:, skill_idx] == 1)[0]
+        
+        if len(problem_indices) == 0:
+            continue
+
+        student_indices = [student_idx] * len(problem_indices)
+        preds = _run_prediction(student_indices, list(problem_indices))
+        
+        avg_mastery = preds.mean().item()
+        skill_id = skill_idx_to_id_map.get(skill_idx, -1)
+        
+        mastery_profile.append(SkillMastery(
+            skill_id=skill_id,
+            skill_name=skill_name,
+            predicted_mastery=avg_mastery
+        ))
+
+    # 按掌握度从低到高排序
+    sorted_profile = sorted(mastery_profile, key=lambda x: x.predicted_mastery)
+    
+    return StudentProfileResponse(student_id=student_id, skill_mastery_profile=sorted_profile)
+
+
+@app.get("/api/student/{student_id}/recommendations", response_model=RecommendationResponse, tags=["核心功能"])
+def get_recommendations(student_id: int, count: int = 5):
+    """
+    为学生推荐下一步的练习题。
+    默认推荐其最薄弱知识点中，最适合他当前水平的题目。
+    """
+    # 复用profile接口逻辑找到最薄弱的技能
+    profile_data = get_student_profile(student_id)
+    if not profile_data.skill_mastery_profile:
+        raise HTTPException(status_code=404, detail="无法为该学生生成技能画像，无法推荐。")
+        
+    weakest_skill = profile_data.skill_mastery_profile[0]
+    target_skill_id = weakest_skill.skill_id
+    target_skill_idx = app.state.id_maps['skill_id_to_idx'].get(target_skill_id)
+
+    if target_skill_idx is None:
+        raise HTTPException(status_code=500, detail=f"Internal error: Cannot find index for skill ID {target_skill_id}")
+    
+    student_idx = app.state.id_maps['student'][student_id]
+    problem_map_rev = {v: k for k, v in app.state.id_maps['problem'].items()}
+
+    # 1. 找到目标技能的所有问题
+    q_matrix_np = app.state.data_matrices['q_matrix'].to_dense().cpu().numpy()
+    problem_indices_for_skill = np.where(q_matrix_np[:, target_skill_idx] == 1)[0]
+    
+    # 2. 找到学生已尝试过的所有问题
+    a_matrix_np = app.state.data_matrices['a_matrix'].to_dense().cpu().numpy()
+    ia_matrix_np = app.state.data_matrices['ia_matrix'].to_dense().cpu().numpy()
+    attempted_mask = (a_matrix_np[student_idx, :] + ia_matrix_np[student_idx, :]) > 0
+    attempted_indices = np.where(attempted_mask)[0]
+
+    # 3. 筛选出未尝试过的候选问题
+    candidate_indices = np.setdiff1d(problem_indices_for_skill, attempted_indices, assume_unique=True)
+
+    if len(candidate_indices) == 0:
+         return RecommendationResponse(
+            student_id=student_id,
+            recommended_for_skill_id=target_skill_id,
+            recommended_for_skill_name=weakest_skill.skill_name,
+            recommendations=[]
+        )
+
+    # 4. 预测这些候选问题的成功率
+    student_indices_batch = [student_idx] * len(candidate_indices)
+    preds = _run_prediction(student_indices_batch, list(candidate_indices))
+    
+    # 5. 找到最接近ZPD (最近发展区, 0.65) 的题目
+    target_prob = 0.65
+    problem_with_preds = sorted(
+        zip(candidate_indices, preds.cpu().numpy()),
+        key=lambda x: abs(x[1] - target_prob)
+    )
+
+    # 6. 格式化并返回top N个推荐
+    recommendations = []
+    for p_idx, p_prob in problem_with_preds[:count]:
+        p_id = problem_map_rev.get(p_idx, -1)
+        recommendations.append(RecommendedProblem(
+            problem_id=p_id,
+            predicted_success_rate=p_prob
+        ))
+
+    return RecommendationResponse(
+        student_id=student_id,
+        recommended_for_skill_id=target_skill_id,
+        recommended_for_skill_name=weakest_skill.skill_name,
+        recommendations=recommendations
+    )
 
 # --- 主程序入口 ---
 if __name__ == '__main__':

@@ -1,38 +1,10 @@
 [Read in English](./README_en.md)
 
-# DKG：用于学生建模的动态知识图谱
+# DKG：基于 ORCDF 的认知诊断引擎
 
-本项目提供了一个专为学生建模设计的动态知识图谱（DKG）后端引擎。它能够将学生的学习交互日志数据，实时转化为一个动态更新的知识图谱。项目提供了一套清晰、强大的Python API，用于记录学生行为、查询学生知识状态，并为上层应用（如集成大语言模型LLM）提供个性化学习建议和决策支持。
+本项目是一个基于 **ORCDF (抗过平滑认知诊断框架)** 模型的学生认知诊断后端引擎。它利用图神经网络 (GNN) 预测学生的习题表现，并提供一个强大的API进行实时诊断预测。
 
-## ✨ 核心功能
-
-- **动态图谱构建**: 从原始学生学习数据中构建一个包含学生、题目和技能的综合知识图谱。
-- **状态持久化**: 支持将构建好的图谱保存到磁盘并快速加载，避免重复构建。
-- **实时更新**: 根据新的学习交互，实时更新学生的知识状态和掌握程度。
-- **学生画像**: 提供详细的学生画像，包括知识技能的强项和弱项。
-- **智能推荐**: 根据学生的薄弱点，为他们推荐下一步的练习题。
-- **LLM集成**: 生成结构化的提示（Prompt），为大语言模型规划个性化学习路径提供上下文。
-
-## 📂 项目结构
-
-```
-.
-├── DKG_API_使用指南.md    # 详细的API中文文档 (首选参考) 🌟
-├── api_server.py            # FastAPI 服务器入口 🚀
-├── dkg.pkl                  # 序列化后的DKG模型文件 💾
-├── README.md                # 主README，提供语言选择
-├── README_en.md             # 英文版README
-├── README_zh.md             # 中文版README (本文)
-├── models/                  # 存放GNN嵌入模型的目录
-├── dataset/                 # 存放原始数据集
-│   └── clear_dataset/       # 清洗后的数据集
-├── dkg_mvp/
-│   ├── dkg_builder.py       # DKG核心类，提供所有API ⭐
-│   ├── gnn_trainer.py       # GNN模型训练器
-│   ├── data_loader.py       # 数据加载与预处理
-│   └── requirements.txt     # 依赖包列表
-└── .gitignore               # Git忽略文件
-```
+---
 
 ## 🚀 快速开始
 
@@ -43,15 +15,18 @@
 ```bash
 git clone https://github.com/MuQY1818/DKG.git
 cd DKG
-# 注意：请先根据 dkg_mvp/requirements.txt 文件顶部的说明，安装匹配的PyTorch和PyG
 pip install -r dkg_mvp/requirements.txt
 ```
 
-### 2. 准备模型文件 (首次运行)
+### 2. 训练GNN模型 (首次运行)
 
-在启动服务器前，请确保已生成了必要的模型文件。
-- **DKG图谱**: 运行 `python -m dkg_mvp.dkg_builder` 会使用数据集构建并保存 `dkg.pkl` 文件到项目根目录。
-- **GNN嵌入**: 运行 `python -m dkg_mvp.gnn_trainer` 会训练GNN并保存嵌入向量到 `models/embeddings/` 目录。
+在启动服务器前，您必须先训练ORCDF模型以生成模型文件。
+
+```bash
+# 此命令将在完整数据集上训练模型
+# 表现最佳的模型将被保存在 'models/' 目录下
+python -m dkg_mvp.train_orcdf
+```
 
 ### 3. 启动API服务器
 
@@ -61,21 +36,50 @@ pip install -r dkg_mvp/requirements.txt
 python api_server.py
 ```
 
-服务器启动后，在浏览器中打开 **`http://127.0.0.1:5000/docs`** 即可访问交互式的API文档，您可以在该页面直接测试所有API。
+服务器启动后，在浏览器中打开 **`http://127.0.0.1:5000/docs`** 即可访问为新预测端点设计的交互式API文档。
+
+---
+
+## ✨ 核心功能
+
+- **高精度预测**: 利用先进的 ORCDF GNN 模型准确预测学生表现。
+- **抗过平滑**: 采用专门的架构和一致性正则化来缓解GNN中常见的过平滑问题，确保学生表征更具区分度。
+- **实时API**: 提供一个高性能的FastAPI后端，为实时预测请求提供服务。
+- **可扩展框架**: 基于PyTorch构建，为未来的功能扩展和研究提供了坚实的基础。
+
+## 🏛️ 系统架构
+
+```mermaid
+graph TD
+    subgraph "数据层 (Data Layer)"
+        A["原始CSV文件 <br> student_logs.csv"]
+    end
+
+    subgraph "处理与训练层 (Processing & Training Layer)"
+        B["data_loader.py <br> (加载 & 预处理)"]
+        C["ORCDF模型 <br> (orcdf/model.py)"]
+        D["训练器 <br> (train_orcdf.py)"]
+        E["持久化模型 <br> orcdf_model.pt"]
+    end
+
+    subgraph "应用层 (Application Layer)"
+        F["API 服务器 <br> api_server.py"]
+        G["教育应用 / 第三方服务"]
+    end
+
+    A --> B;
+    B --> D;
+    C --> D;
+    D -- "训练/保存" --> E;
+    E -- "启动时加载" --> F;
+    F -- "提供端点" --> G;
+```
 
 ## 🛠️ API 参考
 
-所有核心功能都通过FastAPI服务暴露。要了解详细的端点、参数和请求/响应格式，**强烈推荐直接查阅上述交互式API文档**。`DKG_API_使用指南.md` 提供了更偏向于工作流和概念的解释。
+所有核心功能都通过FastAPI服务暴露。要了解详细的端点、参数和请求/响应格式，**强烈推荐直接查阅服务器启动后提供的交互式API文档 (`/docs`)**。
 
-### 主要API端点概览
+### 核心API端点
 
-- **`GET /api/status`**: 检查服务健康状况。
-- **`GET /api/student/{student_id}/profile`**: 检索学生的完整画像。
-- **`POST /api/interaction`**: 记录单次学生交互并实时更新图谱。
-- **`GET /api/problem/{problem_id}/similar`**: (GNN功能) 查找相似题目。
-- **`GET /api/skill/{skill_id}/similar`**: (GNN功能) 查找相似技能。
-- ...以及更多，请参考API文档。
-
-## 📊 数据集
-
-系统当前主要使用 **ASSISTments 2009-2010 Skill Builder** 数据集的公开子集。相关的数据文件已经包含在项目的 `dataset/clear_dataset` 目录中，无需额外下载。
+- **`POST /api/predict`**: 接收一个或多个学生-练习交互，并预测其答对的概率。
+- **`GET /api/status`**: 检查服务健康状况和模型加载状态。

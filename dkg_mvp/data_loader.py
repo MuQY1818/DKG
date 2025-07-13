@@ -160,6 +160,89 @@ class DataLoader:
             'skill_map': skill_map
         }
 
+    def load_orcdf_data(self, **kwargs) -> Optional[Dict]:
+        """
+        加载并格式化数据以适应ORCDF模型的需求。
+
+        该方法会复用 load_skill_builder_data 的结果，并将其处理成
+        适合构建图和进行GNN训练的格式。
+
+        Args:
+            **kwargs: 传递给 load_skill_builder_data 的参数,
+                      例如 nrows 用于调试。
+
+        Returns:
+            一个为ORCDF准备的数据字典，包含:
+            - num_students, num_problems, num_skills: 实体数量
+            - interactions: [(student_idx, problem_idx, correct), ...]
+            - problem_skill_relations: [(problem_idx, skill_idx), ...]
+            - a_matrix: 邻接矩阵 (correct subgraph)
+            - ia_matrix: 邻接矩阵 (incorrect subgraph)
+            - q_matrix: 练习-技能邻接矩阵
+            - entity maps
+        """
+        # 1. 使用现有方法加载基础数据
+        base_data = self.load_skill_builder_data(**kwargs)
+        if not base_data:
+            return None
+        
+        print("Formatting data for ORCDF model...")
+
+        # 2. 提取所需数据
+        interactions_df = base_data['interactions']
+        ps_matrix = base_data['problem_skill_matrix']
+        num_students = base_data['num_students']
+        num_problems = base_data['num_problems']
+        num_skills = base_data['num_skills']
+
+        # 3. 格式化交互数据
+        # 确保列名正确
+        interactions_list = list(interactions_df[[
+            'student_id_idx', 'problem_id_idx', 'correct'
+        ]].itertuples(index=False, name=None))
+
+        # 4. 格式化练习-技能关系
+        ps_relations = []
+        for p_idx in ps_matrix.index:
+            for s_idx in ps_matrix.columns:
+                if ps_matrix.loc[p_idx, s_idx] == 1:
+                    ps_relations.append((p_idx, s_idx))
+        
+        # 5. 构建邻接矩阵 (Adjacency Matrices)
+        # ResG (Response Graph) 的两个组成部分
+        # a_matrix: 正确作答子图 (Correct Subgraph)
+        # ia_matrix: 错误作答子图 (Incorrect Subgraph)
+        a_matrix = np.zeros((num_students, num_problems))
+        ia_matrix = np.zeros((num_students, num_problems))
+        
+        for s_idx, p_idx, correct in interactions_list:
+            if correct == 1:
+                a_matrix[s_idx, p_idx] = 1
+            else:
+                ia_matrix[s_idx, p_idx] = 1
+
+        # q_matrix: 练习-技能关系矩阵 (numpy array)
+        q_matrix = ps_matrix.to_numpy()
+
+        print("Finished formatting.")
+        
+        return {
+            'num_students': num_students,
+            'num_problems': num_problems,
+            'num_skills': num_skills,
+            'interactions': interactions_list,
+            'problem_skill_relations': ps_relations,
+            'a_matrix': a_matrix,
+            'ia_matrix': ia_matrix,
+            'q_matrix': q_matrix,
+            'student_map': base_data['student_map'],
+            'problem_map': base_data['problem_map'],
+            'skill_map': base_data['skill_map'],
+            'skills': base_data['skills'],
+            'problem_descriptions': base_data['problem_descriptions']
+        }
+
+
 def main():
     """用于测试数据加载器的示例"""
     print("Testing DataLoader...")
@@ -188,6 +271,26 @@ def main():
         print(list(skill_builder_data['skills'].items())[:5])
     else:
         print("\nFailed to load Skill Builder filtered data.")
+
+    # 测试为ORCDF准备的数据
+    print("\n" + "="*50)
+    print("Testing ORCDF data loader...")
+    orcdf_data = loader.load_orcdf_data(nrows=1000) # 使用少量数据进行测试
+    if orcdf_data:
+        print("\n--- ORCDF Data Summary ---")
+        print(f"Num Students: {orcdf_data['num_students']}")
+        print(f"Num Problems: {orcdf_data['num_problems']}")
+        print(f"Num Skills: {orcdf_data['num_skills']}")
+        print(f"Num Interactions: {len(orcdf_data['interactions'])}")
+        print(f"Num Problem-Skill Relations: {len(orcdf_data['problem_skill_relations'])}")
+        print(f"Shape of A matrix (correct): {orcdf_data['a_matrix'].shape}")
+        print(f"Shape of IA matrix (incorrect): {orcdf_data['ia_matrix'].shape}")
+        print(f"Shape of Q matrix (problem-skill): {orcdf_data['q_matrix'].shape}")
+        print("\nSample interaction:", orcdf_data['interactions'][0])
+        print("Sample relation:", orcdf_data['problem_skill_relations'][0])
+    else:
+        print("\nFailed to load ORCDF data.")
+
 
 if __name__ == '__main__':
     main()

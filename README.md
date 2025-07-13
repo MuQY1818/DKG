@@ -1,11 +1,11 @@
-# DKG: Dynamic Knowledge Graph for Student Modeling
+# DKG: ORCDF-based Cognitive Diagnosis Engine
 
 [![zh](https://img.shields.io/badge/language-简体中文-blue.svg)](./README_zh.md)
 [![en](https://img.shields.io/badge/language-English-blue.svg)](./README_en.md)
 
-This project provides a backend engine for a Dynamic Knowledge Graph (DKG) designed for student modeling. It transforms student interaction log data into a dynamically updated knowledge graph in real-time, offering a powerful Python API for real-time analysis and personalized recommendations.
+This project provides a backend engine for student cognitive diagnosis based on the **ORCDF (Oversmoothing-Resistant Cognitive Diagnosis Framework)** model. It leverages Graph Neural Networks (GNNs) to predict student performance on exercises, offering a powerful API for real-time diagnostic predictions.
 
-本项目是一个专为学生建模设计的动态知识图谱（DKG）后端引擎。它能将学生的学习交互日志实时转化为一个动态更新的知识图谱，并提供强大的Python API进行实时分析和个性化推荐。
+本项目是一个基于 **ORCDF (抗过平滑认知诊断框架)** 模型的学生认知诊断后端引擎。它利用图神经网络 (GNN) 预测学生的习题表现，并提供一个强大的API进行实时诊断预测。
 
 ---
 
@@ -17,40 +17,32 @@ graph TD
         A["原始CSV文件 <br> student_logs.csv"]
     end
 
-    subgraph "处理层 (Processing Layer)"
+    subgraph "处理与训练层 (Processing & Training Layer)"
         B["data_loader.py <br> (加载 & 预处理)"]
-    end
-
-    subgraph "核心引擎 (Core DKG Engine)"
-        C["DKGBuilder (dkg_builder.py)"]
-        D["内存中的知识图谱 <br> (networkx.MultiDiGraph)"]
-        H["持久化模型 <br> dkg.pkl"]
+        C["ORCDF Model <br> (orcdf/model.py)"]
+        D["Trainer <br> (train_orcdf.py)"]
+        E["持久化模型 <br> orcdf_model.pt"]
     end
 
     subgraph "应用层 (Application Layer)"
-        E["API 服务器 <br> api_server.py"]
-        F["大语言模型 (LLM) 集成"]
-        G["可视化 & 分析"]
+        F["API 服务器 <br> api_server.py"]
+        G["教育应用 / 第三方服务"]
     end
 
     A --> B;
-    B --> C;
-    C -- "构建/更新" --> D;
-    C -- "序列化" --> H;
-    H -- "启动时加载" --> E;
-    D -- "查询" --> C;
-    C -- "提供API" --> E;
-    E -- "提供端点" --> F;
-    E -- "提供端点" --> G;
+    B --> D;
+    C --> D;
+    D -- "训练/保存" --> E;
+    E -- "启动时加载" --> F;
+    F -- "提供端点" --> G;
 ```
 
 ## ✨ Core Features / 核心功能
 
-- **Dynamic Graph Construction**: Builds a comprehensive knowledge graph from raw student learning data.
-- **Real-time Updates**: Updates student knowledge states in real-time based on new learning interactions.
-- **Student Profiling**: Provides detailed student profiles, including strengths and weaknesses.
-- **Intelligent Recommendations**: Recommends the next practice problems for students based on their weak points.
-- **LLM Integration**: Generates structured prompts to provide context for LLMs.
+- **High-Precision Prediction**: Utilizes the advanced ORCDF GNN model to accurately predict student performance.
+- **Oversmoothing Resistance**: Employs a specialized architecture and consistency regularization to mitigate the oversmoothing issue common in GNNs, ensuring more distinct student representations.
+- **Real-time API**: Offers a high-performance FastAPI backend to serve real-time prediction requests.
+- **Scalable Framework**: Built on PyTorch, providing a solid foundation for future extensions and research.
 
 ---
 
@@ -66,23 +58,20 @@ graph TD
     ```bash
     pip install -r dkg_mvp/requirements.txt
     ```
-    > **Note**: For PyTorch and PyG, please follow the manual installation instructions at the top of the `requirements.txt` file to match your CUDA version.
     
-3.  **Generate Model Files**:
-    Before the first run, you must generate the necessary model files:
+3.  **Train the GNN Model**:
+    Before the first run, you must train the ORCDF model and generate the model file.
     ```bash
-    # 1. Generate the DKG model file (dkg.pkl)
-    python -m dkg_mvp.dkg_builder
-
-    # 2. Generate the GNN embedding files
-    python -m dkg_mvp.gnn_trainer
+    # This command will train the model on the full dataset
+    # The best model will be saved in the 'models/' directory
+    python -m dkg_mvp.train_orcdf
     ```
 
 4.  **Run API Server**:
     ```bash
     python api_server.py
     ```
-    Once the server is running, visit `http://127.0.0.1:5000/docs` in your browser to see the interactive API documentation.
+    Once the server is running, visit `http://127.0.0.1:5000/docs` in your browser to see the interactive API documentation for the new prediction endpoints.
 
 ---
 

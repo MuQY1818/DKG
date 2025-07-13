@@ -1,0 +1,261 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script src="lib/bindings/utils.js"></script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 750px;
+                 background-color: #222222;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+             #loadingBar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width: 100%;
+                 height: 750px;
+                 background-color:rgba(200,200,200,0.8);
+                 -webkit-transition: all 0.5s ease;
+                 -moz-transition: all 0.5s ease;
+                 -ms-transition: all 0.5s ease;
+                 -o-transition: all 0.5s ease;
+                 transition: all 0.5s ease;
+                 opacity:1;
+             }
+
+             #bar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width:20px;
+                 height:20px;
+                 margin:auto auto auto auto;
+                 border-radius:11px;
+                 border:2px solid rgba(30,30,30,0.05);
+                 background: rgb(0, 173, 246); /* Old browsers */
+                 box-shadow: 2px 0px 4px rgba(0,0,0,0.4);
+             }
+
+             #border {
+                 position:absolute;
+                 top:10px;
+                 left:10px;
+                 width:500px;
+                 height:23px;
+                 margin:auto auto auto auto;
+                 box-shadow: 0px 0px 4px rgba(0,0,0,0.2);
+                 border-radius:10px;
+             }
+
+             #text {
+                 position:absolute;
+                 top:8px;
+                 left:530px;
+                 width:30px;
+                 height:50px;
+                 margin:auto auto auto auto;
+                 font-size:22px;
+                 color: #000000;
+             }
+
+             div.outerBorder {
+                 position:relative;
+                 top:400px;
+                 width:600px;
+                 height:44px;
+                 margin:auto auto auto auto;
+                 border:8px solid rgba(0,0,0,0.1);
+                 background: rgb(252,252,252); /* Old browsers */
+                 background: -moz-linear-gradient(top,  rgba(252,252,252,1) 0%, rgba(237,237,237,1) 100%); /* FF3.6+ */
+                 background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(252,252,252,1)), color-stop(100%,rgba(237,237,237,1))); /* Chrome,Safari4+ */
+                 background: -webkit-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Chrome10+,Safari5.1+ */
+                 background: -o-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Opera 11.10+ */
+                 background: -ms-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* IE10+ */
+                 background: linear-gradient(to bottom,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* W3C */
+                 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#fcfcfc', endColorstr='#ededed',GradientType=0 ); /* IE6-9 */
+                 border-radius:72px;
+                 box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+             }
+             
+
+             
+
+             
+        </style>
+    
+            <style>
+                html, body {
+                    margin: 0;
+                    padding: 0;
+                }
+                #mynetwork {
+                    width: 100vw;
+                    height: 100vh;
+                }
+            </style>
+            </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+            <div id="loadingBar">
+              <div class="outerBorder">
+                <div id="text">0%</div>
+                <div id="border">
+                  <div id="bar"></div>
+                </div>
+              </div>
+            </div>
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#00CC96", "font": {"color": "white"}, "id": "skill_7", "label": "Table", "shape": "dot", "size": 10, "title": "ID: 7"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_40", "label": "Fraction Of", "shape": "dot", "size": 10, "title": "ID: 40"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_37", "label": "Addition Whole Numbers", "shape": "dot", "size": 10, "title": "ID: 37"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_6", "label": "Stem and Leaf Plot", "shape": "dot", "size": 10, "title": "ID: 6"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_9", "label": "Mean", "shape": "dot", "size": 10, "title": "ID: 9"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_11", "label": "Mode", "shape": "dot", "size": 10, "title": "ID: 11"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_2", "label": "Circle Graph", "shape": "dot", "size": 10, "title": "ID: 2"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_31", "label": "Equivalent Fractions", "shape": "dot", "size": 10, "title": "ID: 31"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_44", "label": "Percent Of", "shape": "dot", "size": 10, "title": "ID: 44"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_45", "label": "Subtraction Whole Numbers", "shape": "dot", "size": 10, "title": "ID: 45"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_54", "label": "Absolute Value", "shape": "dot", "size": 10, "title": "ID: 54"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_56", "label": "Pattern Finding ", "shape": "dot", "size": 10, "title": "ID: 56"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_29", "label": "Calculations with Similar Figures", "shape": "dot", "size": 10, "title": "ID: 29"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_24", "label": "Effect of Changing Dimensions of a Shape Prportionally", "shape": "dot", "size": 10, "title": "ID: 24"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_13", "label": "Counting Methods", "shape": "dot", "size": 10, "title": "ID: 13"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_14", "label": "Probability of Two Distinct Events", "shape": "dot", "size": 10, "title": "ID: 14"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_34", "label": "Ordering Integers", "shape": "dot", "size": 10, "title": "ID: 34"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_35", "label": "Ordering Real Numbers", "shape": "dot", "size": 10, "title": "ID: 35"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_46", "label": "Square Root", "shape": "dot", "size": 10, "title": "ID: 46"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_94", "label": "Write Linear Equation from Situation", "shape": "dot", "size": 10, "title": "ID: 94"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_39", "label": "Estimation", "shape": "dot", "size": 10, "title": "ID: 39"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_21", "label": "Pythagorean Theorem", "shape": "dot", "size": 10, "title": "ID: 21"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_92", "label": "Computation with Real Numbers", "shape": "dot", "size": 10, "title": "ID: 92"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_16", "label": "Interior Angles Figures with More than 3 Sides", "shape": "dot", "size": 10, "title": "ID: 16"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_17", "label": "Interior Angles Triangle", "shape": "dot", "size": 10, "title": "ID: 17"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_4", "label": "Number Line", "shape": "dot", "size": 10, "title": "ID: 4"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_110", "label": "Solving Inequalities", "shape": "dot", "size": 10, "title": "ID: 110"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_23", "label": "Unit Conversion Within a System", "shape": "dot", "size": 10, "title": "ID: 23"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_43", "label": "Multiplication Whole Numbers", "shape": "dot", "size": 10, "title": "ID: 43"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_70", "label": "Addition and Subtraction Positive Decimals", "shape": "dot", "size": 10, "title": "ID: 70"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_62", "label": "Intercept", "shape": "dot", "size": 10, "title": "ID: 62"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_63", "label": "Linear Equations", "shape": "dot", "size": 10, "title": "ID: 63"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_67", "label": "Slope", "shape": "dot", "size": 10, "title": "ID: 67"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_61", "label": "Choose an Equation from Given Information", "shape": "dot", "size": 10, "title": "ID: 61"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_79", "label": "Area Trapezoid", "shape": "dot", "size": 10, "title": "ID: 79"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_76", "label": "Area Irregular Figure", "shape": "dot", "size": 10, "title": "ID: 76"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_10", "label": "Median", "shape": "dot", "size": 10, "title": "ID: 10"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_12", "label": "Range", "shape": "dot", "size": 10, "title": "ID: 12"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_8", "label": "Venn Diagram", "shape": "dot", "size": 10, "title": "ID: 8"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_3", "label": "Histogram as Table or Graph", "shape": "dot", "size": 10, "title": "ID: 3"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_48", "label": "Proportion", "shape": "dot", "size": 10, "title": "ID: 48"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_15", "label": "Probability of a Single Event", "shape": "dot", "size": 10, "title": "ID: 15"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_5", "label": "Scatter Plot", "shape": "dot", "size": 10, "title": "ID: 5"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_42", "label": "Multiplication Fractions", "shape": "dot", "size": 10, "title": "ID: 42"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_69", "label": "Addition and Subtraction Integers", "shape": "dot", "size": 10, "title": "ID: 69"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_71", "label": "Multiplication and Division Integers", "shape": "dot", "size": 10, "title": "ID: 71"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_72", "label": "Addition and Subtraction Fractions", "shape": "dot", "size": 10, "title": "ID: 72"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_88", "label": "Equation Solving Two or Fewer Steps", "shape": "dot", "size": 10, "title": "ID: 88"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_86", "label": "Order of Operations +,-,/,* () positive reals", "shape": "dot", "size": 10, "title": "ID: 86"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_33", "label": "Ordering Fractions", "shape": "dot", "size": 10, "title": "ID: 33"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_26", "label": "Circumference ", "shape": "dot", "size": 10, "title": "ID: 26"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_1", "label": "Box and Whisker", "shape": "dot", "size": 10, "title": "ID: 1"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_30", "label": "Conversion of Fraction Decimals Percents", "shape": "dot", "size": 10, "title": "ID: 30"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_50", "label": "Unit Rate", "shape": "dot", "size": 10, "title": "ID: 50"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_32", "label": "Ordering Positive Decimals", "shape": "dot", "size": 10, "title": "ID: 32"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_36", "label": "Rounding", "shape": "dot", "size": 10, "title": "ID: 36"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_84", "label": "Volume Rectangular Prism", "shape": "dot", "size": 10, "title": "ID: 84"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_87", "label": "Order of Operations All", "shape": "dot", "size": 10, "title": "ID: 87"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_47", "label": "Finding Percents", "shape": "dot", "size": 10, "title": "ID: 47"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_58", "label": "Absolute Value", "shape": "dot", "size": 10, "title": "ID: 58"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_59", "label": "Algebraic Simplification", "shape": "dot", "size": 10, "title": "ID: 59"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_60", "label": "Algebraic Solving", "shape": "dot", "size": 10, "title": "ID: 60"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_64", "label": "Percent Discount", "shape": "dot", "size": 10, "title": "ID: 64"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_22", "label": "Nets of 3D Figures", "shape": "dot", "size": 10, "title": "ID: 22"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_19", "label": "Complementary and Supplementary Angles", "shape": "dot", "size": 10, "title": "ID: 19"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_57", "label": "D.4.8-understanding-concept-of-probabilities", "shape": "dot", "size": 10, "title": "ID: 57"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_18", "label": "Congruence", "shape": "dot", "size": 10, "title": "ID: 18"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_52", "label": "Divisibility Rules", "shape": "dot", "size": 10, "title": "ID: 52"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_28", "label": "Reading a Ruler or Scale", "shape": "dot", "size": 10, "title": "ID: 28"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_27", "label": "Perimeter of a Polygon", "shape": "dot", "size": 10, "title": "ID: 27"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_108", "label": "Solving for a variable", "shape": "dot", "size": 10, "title": "ID: 108"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_55", "label": "Exponents", "shape": "dot", "size": 10, "title": "ID: 55"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_38", "label": "Division Fractions", "shape": "dot", "size": 10, "title": "ID: 38"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_49", "label": "Scale Factor", "shape": "dot", "size": 10, "title": "ID: 49"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_82", "label": "Surface Area Rectangular Prism", "shape": "dot", "size": 10, "title": "ID: 82"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_51", "label": "Scientific Notation", "shape": "dot", "size": 10, "title": "ID: 51"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_96", "label": "Write Linear Equation from Graph", "shape": "dot", "size": 10, "title": "ID: 96"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_65", "label": "Percents", "shape": "dot", "size": 10, "title": "ID: 65"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_25", "label": "Area Circle", "shape": "dot", "size": 10, "title": "ID: 25"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_41", "label": "Least Common Multiple", "shape": "dot", "size": 10, "title": "ID: 41"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_89", "label": "Equation Solving More Than Two Steps", "shape": "dot", "size": 10, "title": "ID: 89"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_20", "label": "Angles on Parallel Lines Cut by a Transversal", "shape": "dot", "size": 10, "title": "ID: 20"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_93", "label": "Write Linear Equation from Ordered Pairs", "shape": "dot", "size": 10, "title": "ID: 93"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_53", "label": "Prime Number", "shape": "dot", "size": 10, "title": "ID: 53"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_68", "label": "Multiplication and Division Positive Decimals", "shape": "dot", "size": 10, "title": "ID: 68"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_85", "label": "Volume Sphere", "shape": "dot", "size": 10, "title": "ID: 85"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_66", "label": "Rate", "shape": "dot", "size": 10, "title": "ID: 66"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_78", "label": "Area Rectangle", "shape": "dot", "size": 10, "title": "ID: 78"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_80", "label": "Area Triangle", "shape": "dot", "size": 10, "title": "ID: 80"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_77", "label": "Area Parallelogram", "shape": "dot", "size": 10, "title": "ID: 77"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_81", "label": "Surface Area Cylinder", "shape": "dot", "size": 10, "title": "ID: 81"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_83", "label": "Volume Cylinder", "shape": "dot", "size": 10, "title": "ID: 83"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_91", "label": "Greatest Common Factor", "shape": "dot", "size": 10, "title": "ID: 91"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_104", "label": "Solving Systems of Linear Equations", "shape": "dot", "size": 10, "title": "ID: 104"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_111", "label": "Solving Systems of Linear Equations by Graphing", "shape": "dot", "size": 10, "title": "ID: 111"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_102", "label": "Polynomial Factors", "shape": "dot", "size": 10, "title": "ID: 102"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_74", "label": "Rotations", "shape": "dot", "size": 10, "title": "ID: 74"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_73", "label": "Reflection", "shape": "dot", "size": 10, "title": "ID: 73"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_75", "label": "Translations", "shape": "dot", "size": 10, "title": "ID: 75"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_101", "label": "Midpoint", "shape": "dot", "size": 10, "title": "ID: 101"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_107", "label": "Interpreting Coordinate Graphs ", "shape": "dot", "size": 10, "title": "ID: 107"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_90", "label": "Angles - Obtuse, Acute, and Right", "shape": "dot", "size": 10, "title": "ID: 90"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_100", "label": "Distributive Property", "shape": "dot", "size": 10, "title": "ID: 100"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_95", "label": "Recognize Linear Pattern", "shape": "dot", "size": 10, "title": "ID: 95"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_109", "label": "Simplifying Expressions positive exponents", "shape": "dot", "size": 10, "title": "ID: 109"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_99", "label": "Finding Slope from Ordered Pairs", "shape": "dot", "size": 10, "title": "ID: 99"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_97", "label": "Finding Slope From Situation", "shape": "dot", "size": 10, "title": "ID: 97"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_106", "label": "Parts of a Polyomial, Terms, Coefficient, Monomial, Exponent, Variable", "shape": "dot", "size": 10, "title": "ID: 106"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_103", "label": "Recognize Quadratic Pattern", "shape": "dot", "size": 10, "title": "ID: 103"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_98", "label": "Finding Slope From Equation", "shape": "dot", "size": 10, "title": "ID: 98"}, {"color": "#00CC96", "font": {"color": "white"}, "id": "skill_105", "label": "Quadratic Formula to Solve Quadratic Equation", "shape": "dot", "size": 10, "title": "ID: 105"}]);
+                  edges = new vis.DataSet([{"arrows": "to", "color": "#FFA15A", "from": "skill_7", "title": "prerequisite: 0.95", "to": "skill_40", "type": "prerequisite", "width": 1}, {"arrows": "", "color": "#AB63FA", "from": "skill_7", "title": "similar: 0.46", "to": "skill_37", "type": "similar", "width": 1}, {"arrows": "", "color": "#AB63FA", "from": "skill_6", "title": "similar: 0.40", "to": "skill_9", "type": "similar", "width": 1}, {"arrows": "", "color": "#AB63FA", "from": "skill_6", "title": "similar: 0.38", "to": "skill_11", "type": "similar", "width": 1}, {"arrows": "", "color": "#AB63FA", "from": "skill_2", "title": "similar: 0.59", "to": "skill_31", "type": "similar", "width": 1}, {"arrows": "", "color": "#AB63FA", "from": "skill_2", "title": "similar: 0.51", "to": "skill_44", "type": "similar", "width": 1}, {"arrows": "", "color": "#AB63FA", "from": "skill_45", "title": "similar: 0.34", "to": "skill_54", "type": "similar", "width": 1}, {"arrows": "", "color": "#AB63FA", "from": "skill_45", "title": "similar: 0.45", "to": "skill_56", "type": "similar", "width": 1}, {"arrows": "to", "color": "#FFA15A", "from": "skill_29", "title": "prerequisite: 0.94", "to": "skill_24", "type": "prerequisite", "width": 1}, {"arrows": "", "color": "#AB63FA", "from": "skill_13", "title": "similar: 0.34", "to": "skill_14", "type": "similar", "width": 1}, {"arrows": "", "color": "#AB63FA", "from": "skill_34", "title": "similar: 0.68", "to": "skill_35", "type": "similar", "width": 1}, {"arrows": "", "color": "#AB63FA", "from": "skill_34", "title": "similar: 0.49", "to": "skill_46", "type": "similar", "width": 1}, {"arrows": "", "color": "#AB63FA", "from": "skill_56", "title": "similar: 0.53", "to": "skill_94", "type": "similar", "width": 1}, {"arrows": "to", "color": "#FFA15A", "from": "skill_46", "title": "prerequisite: 0.49", "to": "skill_35", "type": "prerequisite", "width": 1}, {"arrows": "to", "color": "#FFA15A", "from": "skill_46", "title": "prerequisite: 0.76", "to": "skill_39", "type": "prerequisite", "width": 1}, {"arrows": "to", "color": "#FFA15A", "from": "skill_21", "title": "prerequisite: 1.00", "to": "skill_92", "type": "prerequisite", "width": 1}, {"arrows": "", "color": "#AB63FA", "from": "skill_16", "title": "similar: 0.73", "to": "skill_17", "type": "similar", "width": 1}, {"arrows": "", "color": "#AB63FA", "from": "skill_39", "title": "similar: 0.36", "to": "skill_46", "type": "similar", "width": 1}, {"arrows": "", "color": "#AB63FA", "from": "skill_35", "title": "similar: 0.71", "to": "skill_46", "type": "similar", "width": 1}, {"arrows": "", "color": "#AB63FA", "from": "skill_4", "title": "similar: 1.00", "to": "skill_110", "type": "similar", "width": 1}, {"arrows": "", "color": "#AB63FA", "from": "skill_23", "title": "similar: 0.36", "to": "skill_43", "type": "similar", "width": 1}, {"arrows": "", "color": "#AB63FA", "from": "skill_23", "title": "similar: 0.35", "to": "skill_70", "type": "similar", "width": 1}, {"arrows": "", "color": "#AB63FA", "from": "skill_62", "title": "similar: 1.00", "to": "skill_63", "type": "similar", "width": 1}, {"arrows": "", "color": "#AB63FA", "from": "skill_62", "title": "similar: 1.00", "to": "skill_67", "type": "similar", "width": 1}, {"arrows": "", "color": "#AB63FA", "from": "skill_63", "title": "similar: 1.00", "to": "skill_67", "type": "similar", "width": 1}, {"arrows": "", "color": "#AB63FA", "from": "skill_61", "title": "similar: 1.00", "to": "skill_62", "type": "similar", "width": 1}, {"arrows": "", "color": "#AB63FA", "from": "skill_61", "title": "similar: 1.00", "to": "skill_63", "type": "similar", "width": 1}, {"arrows": "", "color": "#AB63FA", "from": "skill_61", "title": "similar: 1.00", "to": "skill_67", "type": "similar", "width": 1}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+                      network.on("stabilizationProgress", function(params) {
+                          document.getElementById('loadingBar').removeAttribute("style");
+                          var maxWidth = 496;
+                          var minWidth = 20;
+                          var widthFactor = params.iterations/params.total;
+                          var width = Math.max(minWidth,maxWidth * widthFactor);
+                          document.getElementById('bar').style.width = width + 'px';
+                          document.getElementById('text').innerHTML = Math.round(widthFactor*100) + '%';
+                      });
+                      network.once("stabilizationIterationsDone", function() {
+                          document.getElementById('text').innerHTML = '100%';
+                          document.getElementById('bar').style.width = '496px';
+                          document.getElementById('loadingBar').style.opacity = 0;
+                          // really clean the dom element
+                          setTimeout(function () {document.getElementById('loadingBar').style.display = 'none';}, 500);
+                      });
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
