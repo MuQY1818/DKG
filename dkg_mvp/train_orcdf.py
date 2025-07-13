@@ -248,10 +248,10 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', type=int, default=100, help='Number of training epochs.')
     parser.add_argument('--batch_size', type=int, default=256, help='Batch size for training.')
     parser.add_argument('--embed_dim', type=int, default=64, help='Dimension of embeddings.')
-    parser.add_argument('--num_layers', type=int, default=2, help='Number of RGC layers.')
+    parser.add_argument('--num_layers', type=int, default=2, help='Number of GNN layers in the model.')
     parser.add_argument('--lr', type=float, default=0.001, help='Learning rate.')
-    parser.add_argument('--weight_decay', type=float, default=1e-5, help='Weight decay for optimizer.')
-    parser.add_argument('--flip_ratio', type=float, default=0.1, help='Ratio of edges to flip for regularization.')
+    parser.add_argument('--weight_decay', type=float, default=1e-5, help='Weight decay for the optimizer.')
+    parser.add_argument('--flip_ratio', type=float, default=0.1, help='Ratio of edges to flip for consistency regularization.')
     parser.add_argument('--reg_lambda', type=float, default=0.1, help='Lambda for consistency regularization loss.')
     parser.add_argument('--nrows', type=int, default=None, help='Number of rows to read from data for debugging.')
     
