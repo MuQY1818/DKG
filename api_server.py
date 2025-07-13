@@ -5,9 +5,12 @@ import json
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
+from fastapi.middleware.cors import CORSMiddleware # 导入CORS中间件
 
 import torch
 import numpy as np
+import ngrok
+from dotenv import load_dotenv
 
 # 将项目根目录添加到sys.path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -18,7 +21,9 @@ from dkg_mvp.analytics import StudentAnalytics # 引入分析模块
 from dkg_mvp.prompt_generator import generate_learning_path_prompt # 引入提示生成器
 
 # --- 全局变量 ---
-MODELS_DIR = "models"
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+MODELS_DIR = os.path.join(PROJECT_ROOT, "models")
+FRONTEND_DIR = os.path.join(PROJECT_ROOT, "frontend")
 MODEL_NAME = "orcdf_best_model_seed42.pt" # 训练好的模型文件名
 MODEL_PATH = os.path.join(MODELS_DIR, MODEL_NAME)
 
@@ -27,6 +32,20 @@ app = FastAPI(
     description="基于ORCDF（抗过平滑认知诊断框架）的API，用于预测学生的答题表现，并提供丰富的学习分析。",
     version="2.1.0",
 )
+
+# --- CORS 中间件配置 ---
+# 允许所有来源访问，这在开发环境中非常方便。
+# 在生产环境中，应该将其限制为前端应用的实际域名。
+origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],  # 允许所有HTTP方法
+    allow_headers=["*"],  # 允许所有HTTP请求头
+)
+
 
 # 使用 app.state 来管理全局资源
 # app.state.model -> ORCDF 模型
@@ -101,8 +120,7 @@ def startup_event():
 
     # 1. 加载数据以获取矩阵和ID映射
     print("加载数据以构建图矩阵和ID映射...")
-    project_root = os.path.dirname(os.path.abspath(__file__))
-    dataset_path = os.path.join(project_root, 'dataset')
+    dataset_path = os.path.join(PROJECT_ROOT, 'dataset')
     
     loader = DataLoader(dataset_path)
     # 加载完整数据以构建完整的图，并为实时分析保存
@@ -146,7 +164,7 @@ def startup_event():
     print("数据矩阵和ID映射加载完毕。")
 
     # 2. 加载预计算的分析数据
-    analytics_data_path = os.path.join(project_root, 'dkg_mvp', 'analytics_data.json')
+    analytics_data_path = os.path.join(PROJECT_ROOT, 'dkg_mvp', 'analytics_data.json')
     if os.path.exists(analytics_data_path):
         print(f"加载预计算的分析数据从 {analytics_data_path}...")
         with open(analytics_data_path, 'r', encoding='utf-8') as f:
@@ -239,14 +257,6 @@ def _get_student_skill_profile(student_id: int) -> List[SkillMastery]:
 
 
 # --- API Endpoints ---
-@app.get("/", tags=["通用"])
-def read_root():
-    """欢迎信息和API文档链接"""
-    return {
-        "message": "欢迎使用 ORCDF 认知诊断 API",
-        "documentation_url": "/docs"
-    }
-
 @app.get("/api/status", tags=["通用"])
 def get_status():
     """检查API服务和模型的状态"""
@@ -491,4 +501,23 @@ def get_llm_learning_prompt(student_id: int):
 
 # --- 主程序入口 ---
 if __name__ == '__main__':
+    # 尝试加载 .env 文件中的环境变量，特别是 NGROK_AUTHTOKEN
+    load_dotenv()
+    
+    # 从环境变量中获取 ngrok authtoken
+    authtoken = os.environ.get("NGROK_AUTHTOKEN")
+    if authtoken:
+        print("--- 配置 ngrok 认证令牌 ---")
+        ngrok.set_auth_token(authtoken)
+    else:
+        print("--- 未找到 ngrok 认证令牌，将使用临时会话 ---")
+
+    # 启动 ngrok 隧道
+    listener = ngrok.connect(5000)
+    public_url = listener.url()
+    print(f"--- 🚀 API 已通过 ngrok 暴露到公网 ---")
+    print(f"--- 公网访问地址: {public_url} ---")
+    print(f"--- 本地访问地址: http://127.0.0.1:5000 ---")
+    
+    # 启动 uvicorn 服务器
     uvicorn.run("api_server:app", host='0.0.0.0', port=5000, reload=True) 
