@@ -10,6 +10,7 @@ import numpy as np
 import argparse
 import os
 import random
+import json
 
 from .data_loader import DataLoader
 from .orcdf.model import ORCDF
@@ -221,6 +222,12 @@ def main(args):
     # --- 4. Training Loop ---
     print("\nStarting training process...")
     best_auc = 0.0
+    patience_counter = 0
+    history = {
+        "train_loss": [],
+        "val_auc": [],
+        "val_acc": []
+    }
     output_dir = os.path.join(project_root, 'models')
     os.makedirs(output_dir, exist_ok=True)
     best_model_path = os.path.join(output_dir, f'orcdf_best_model_seed{args.seed}.pt')
@@ -229,16 +236,35 @@ def main(args):
         train_loss = train_epoch(model, optimizer, loss_fn, train_loader, device, a_matrix, ia_matrix, q_matrix, args)
         val_auc, val_acc = evaluate_epoch(model, val_loader, device, a_matrix, ia_matrix, q_matrix)
 
+        # Record history
+        history["train_loss"].append(train_loss)
+        history["val_auc"].append(val_auc)
+        history["val_acc"].append(val_acc)
+
         print(f"Epoch {epoch+1}/{args.epochs} | Train Loss: {train_loss:.4f} | Val AUC: {val_auc:.4f} | Val Acc: {val_acc:.4f}")
 
         if val_auc > best_auc:
             best_auc = val_auc
+            patience_counter = 0  # Reset patience
             torch.save(model.state_dict(), best_model_path)
             print(f"  -> New best model saved with AUC: {best_auc:.4f}")
+        else:
+            patience_counter += 1
+            print(f"  -> No improvement in Val AUC for {patience_counter} epoch(s).")
+
+        if patience_counter >= args.patience:
+            print(f"\nEarly stopping triggered after {patience_counter} epochs without improvement.")
+            break
 
     print("\nTraining finished.")
     print(f"Best validation AUC: {best_auc:.4f}")
     print(f"Best model saved to: {best_model_path}")
+
+    # --- 5. Save Training History ---
+    history_path = os.path.join(output_dir, f'training_history_seed{args.seed}.json')
+    with open(history_path, 'w') as f:
+        json.dump(history, f, indent=4)
+    print(f"Training history saved to: {history_path}")
 
 
 if __name__ == '__main__':
@@ -253,6 +279,7 @@ if __name__ == '__main__':
     parser.add_argument('--weight_decay', type=float, default=1e-5, help='Weight decay for the optimizer.')
     parser.add_argument('--flip_ratio', type=float, default=0.1, help='Ratio of edges to flip for consistency regularization.')
     parser.add_argument('--reg_lambda', type=float, default=0.1, help='Lambda for consistency regularization loss.')
+    parser.add_argument('--patience', type=int, default=10, help='Patience for early stopping.')
     parser.add_argument('--nrows', type=int, default=None, help='Number of rows to read from data for debugging.')
     
     args = parser.parse_args()
