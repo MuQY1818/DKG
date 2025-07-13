@@ -3,9 +3,12 @@ import sys
 import uvicorn
 import json
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
+from starlette.responses import FileResponse
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
 from fastapi.middleware.cors import CORSMiddleware # 导入CORS中间件
+from contextlib import asynccontextmanager
 
 import torch
 import numpy as np
@@ -27,10 +30,103 @@ FRONTEND_DIR = os.path.join(PROJECT_ROOT, "frontend")
 MODEL_NAME = "orcdf_best_model_seed42.pt" # 训练好的模型文件名
 MODEL_PATH = os.path.join(MODELS_DIR, MODEL_NAME)
 
+# --- Lifespan 事件处理器 ---
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    在服务器启动时加载模型和数据，在关闭时清理资源。
+    """
+    # --- Startup Logic ---
+    print("--- 服务器启动中，正在加载ORCDF模型及数据... ---")
+    
+    app.state.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"使用设备: {app.state.device}")
+
+    # 1. 加载数据以获取矩阵和ID映射
+    print("加载数据以构建图矩阵和ID映射...")
+    dataset_path = os.path.join(PROJECT_ROOT, 'dataset')
+    
+    loader = DataLoader(dataset_path)
+    raw_skill_builder_data = loader.load_skill_builder_data()
+    orcdf_data = loader.load_orcdf_data() 
+    if not orcdf_data or not raw_skill_builder_data:
+        print("错误：无法加载数据，服务无法启动。")
+        return
+
+    orcdf_data['skill_builder_interactions'] = raw_skill_builder_data['interactions']
+    app.state.raw_data_for_analytics = orcdf_data
+
+    app.state.id_maps = {
+        "student": orcdf_data['student_map'],
+        "problem": orcdf_data['problem_map'],
+        "skill": orcdf_data['skill_map'],
+        "skill_idx_to_name": orcdf_data['skills'],
+        "skill_id_to_idx": orcdf_data['skill_map'],
+        "skill_idx_to_id": {v: k for k, v in orcdf_data['skill_map'].items()}
+    }
+    app.state.problem_descriptions = orcdf_data['problem_descriptions']
+    
+    print("--- 样本学生ID ---")
+    try:
+        student_map_sample = list(app.state.id_maps['student'].keys())[:5]
+        print(f"可用的学生ID示例: {student_map_sample}")
+    except Exception as e:
+        print(f"打印学生ID时出错: {e}")
+    print("--------------------")
+
+    app.state.data_matrices = {
+        "a_matrix": to_sparse_tensor(orcdf_data['a_matrix'], app.state.device),
+        "ia_matrix": to_sparse_tensor(orcdf_data['ia_matrix'], app.state.device),
+        "q_matrix": to_sparse_tensor(orcdf_data['q_matrix'], app.state.device),
+    }
+    print("数据矩阵和ID映射加载完毕。")
+
+    analytics_data_path = os.path.join(PROJECT_ROOT, 'dkg_mvp', 'analytics_data.json')
+    if os.path.exists(analytics_data_path):
+        print(f"加载预计算的分析数据从 {analytics_data_path}...")
+        with open(analytics_data_path, 'r', encoding='utf-8') as f:
+            app.state.analytics_data = json.load(f)
+        print("分析数据加载成功。")
+    else:
+        print(f"警告: 在 '{analytics_data_path}' 未找到分析数据文件。分析类API将不可用。")
+        app.state.analytics_data = None
+
+    if not os.path.exists(MODEL_PATH):
+        print(f"错误: 在 '{MODEL_PATH}' 找不到模型文件。请先运行 train_orcdf.py 进行训练。")
+        app.state.model = None
+    else:
+        print(f"从 {MODEL_PATH} 加载 ORCDF 模型...")
+        model = ORCDF(
+            num_students=orcdf_data['num_students'],
+            num_problems=orcdf_data['num_problems'],
+            num_skills=orcdf_data['num_skills'],
+            embed_dim=64,
+            num_layers=2
+        ).to(app.state.device)
+        
+        model.load_state_dict(torch.load(MODEL_PATH, map_location=app.state.device))
+        model.eval()
+        app.state.model = model
+        print("ORCDF 模型加载成功。")
+    
+    print("--- 服务器启动完成 ---")
+
+    yield
+
+    # --- Shutdown Logic ---
+    print("--- 服务器正在关闭，断开 ngrok 连接... ---")
+    try:
+        ngrok.kill()
+        print("--- ngrok 连接已成功关闭。 ---")
+    except Exception as e:
+        print(f"关闭 ngrok 时出错: {e}")
+
+
 app = FastAPI(
     title="ORCDF 认知诊断 API",
     description="基于ORCDF（抗过平滑认知诊断框架）的API，用于预测学生的答题表现，并提供丰富的学习分析。",
     version="2.1.0",
+    lifespan=lifespan
 )
 
 # --- CORS 中间件配置 ---
@@ -55,7 +151,19 @@ app.add_middleware(
 # app.state.analytics_data -> 预计算的分析数据
 # app.state.raw_data_for_analytics -> 用于实时计算分析的原始数据
 
+# --- 挂载静态文件 (前端) ---
+# 必须在所有路由之前定义
+app.mount("/frontend", StaticFiles(directory=FRONTEND_DIR), name="frontend")
+
+
 # --- Pydantic 模型定义 ---
+class StudentInfo(BaseModel):
+    student_id: int
+
+class ProblemInfo(BaseModel):
+    problem_id: int
+    problem_text: Optional[str] = None
+
 class PredictionRequest(BaseModel):
     student_id: int = Field(..., description="学生的原始ID")
     problem_id: int = Field(..., description="练习的原始ID")
@@ -108,93 +216,6 @@ class LLMPromptResponse(BaseModel):
     student_id: int
     prompt: str = Field(..., description="为LLM生成的、用于学习路径规划的完整文本提示")
 
-
-# --- 事件处理器 ---
-@app.on_event("startup")
-def startup_event():
-    """在服务器启动时加载模型和所需数据"""
-    print("--- 服务器启动中，正在加载ORCDF模型及数据... ---")
-    
-    app.state.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"使用设备: {app.state.device}")
-
-    # 1. 加载数据以获取矩阵和ID映射
-    print("加载数据以构建图矩阵和ID映射...")
-    dataset_path = os.path.join(PROJECT_ROOT, 'dataset')
-    
-    loader = DataLoader(dataset_path)
-    # 加载完整数据以构建完整的图，并为实时分析保存
-    raw_skill_builder_data = loader.load_skill_builder_data()
-    orcdf_data = loader.load_orcdf_data() 
-    if not orcdf_data or not raw_skill_builder_data:
-        print("错误：无法加载数据，服务无法启动。")
-        # 在实际应用中，这里应该有更健壮的错误处理
-        return
-
-    # 将实时分析所需的数据存储到 state
-    orcdf_data['skill_builder_interactions'] = raw_skill_builder_data['interactions']
-    app.state.raw_data_for_analytics = orcdf_data
-
-    app.state.id_maps = {
-        "student": orcdf_data['student_map'],
-        "problem": orcdf_data['problem_map'],
-        "skill": orcdf_data['skill_map'], # This is {raw_id: index}
-        "skill_idx_to_name": orcdf_data['skills'],
-        # Correctly named maps
-        "skill_id_to_idx": orcdf_data['skill_map'], # Direct mapping: {skill_id: skill_idx}
-        "skill_idx_to_id": {v: k for k, v in orcdf_data['skill_map'].items()} # Reverse mapping: {skill_idx: skill_id}
-    }
-    app.state.problem_descriptions = orcdf_data['problem_descriptions']
-    
-    # 调试：打印一些学生ID
-    print("--- 样本学生ID ---")
-    try:
-        student_map_sample = list(app.state.id_maps['student'].keys())[:5]
-        print(f"可用的学生ID示例: {student_map_sample}")
-    except Exception as e:
-        print(f"打印学生ID时出错: {e}")
-    print("--------------------")
-
-    # 将矩阵转换为稀疏张量并存储
-    app.state.data_matrices = {
-        "a_matrix": to_sparse_tensor(orcdf_data['a_matrix'], app.state.device),
-        "ia_matrix": to_sparse_tensor(orcdf_data['ia_matrix'], app.state.device),
-        "q_matrix": to_sparse_tensor(orcdf_data['q_matrix'], app.state.device),
-    }
-    print("数据矩阵和ID映射加载完毕。")
-
-    # 2. 加载预计算的分析数据
-    analytics_data_path = os.path.join(PROJECT_ROOT, 'dkg_mvp', 'analytics_data.json')
-    if os.path.exists(analytics_data_path):
-        print(f"加载预计算的分析数据从 {analytics_data_path}...")
-        with open(analytics_data_path, 'r', encoding='utf-8') as f:
-            app.state.analytics_data = json.load(f)
-        print("分析数据加载成功。")
-    else:
-        print(f"警告: 在 '{analytics_data_path}' 未找到分析数据文件。分析类API将不可用。")
-        app.state.analytics_data = None
-
-    # 3. 加载训练好的ORCDF模型
-    if not os.path.exists(MODEL_PATH):
-        print(f"错误: 在 '{MODEL_PATH}' 找不到模型文件。请先运行 train_orcdf.py 进行训练。")
-        return
-        
-    print(f"从 {MODEL_PATH} 加载 ORCDF 模型...")
-    # 注意：这里的超参数需要与训练时使用的相匹配
-    model = ORCDF(
-        num_students=orcdf_data['num_students'],
-        num_problems=orcdf_data['num_problems'],
-        num_skills=orcdf_data['num_skills'],
-        embed_dim=64, # 需与训练时一致
-        num_layers=2  # 需与训练时一致
-    ).to(app.state.device)
-    
-    model.load_state_dict(torch.load(MODEL_PATH, map_location=app.state.device))
-    model.eval() # 设置为评估模式
-    
-    app.state.model = model
-    print("ORCDF 模型加载成功。")
-    print("--- 服务器启动完成 ---")
 
 # --- 辅助函数 ---
 def _run_prediction(student_ids: List[int], problem_ids: List[int]) -> torch.Tensor:
@@ -257,6 +278,11 @@ def _get_student_skill_profile(student_id: int) -> List[SkillMastery]:
 
 
 # --- API Endpoints ---
+@app.get("/", include_in_schema=False)
+async def read_index():
+    """服务前端主页"""
+    return FileResponse(os.path.join(FRONTEND_DIR, 'index.html'))
+
 @app.get("/api/status", tags=["通用"])
 def get_status():
     """检查API服务和模型的状态"""
@@ -271,6 +297,34 @@ def get_status():
         "analytics_data_loaded": analytics_loaded,
         "device": str(app.state.device) if hasattr(app.state, 'device') else "N/A"
     }
+
+@app.get("/api/students", response_model=List[StudentInfo], tags=["数据查询"])
+def get_all_students():
+    """获取所有可用学生的ID列表。"""
+    if not hasattr(app.state, 'id_maps') or 'student' not in app.state.id_maps:
+        raise HTTPException(status_code=503, detail="学生ID映射数据未加载。")
+    
+    student_ids = list(app.state.id_maps['student'].keys())
+    return [{"student_id": sid} for sid in sorted(student_ids)]
+
+@app.get("/api/problems", response_model=List[ProblemInfo], tags=["数据查询"])
+def get_all_problems():
+    """获取所有可用练习的ID和描述列表。"""
+    if not hasattr(app.state, 'id_maps') or 'problem' not in app.state.id_maps:
+        raise HTTPException(status_code=503, detail="练习ID映射数据未加载。")
+    
+    problem_map = app.state.id_maps['problem']
+    problem_descriptions = getattr(app.state, 'problem_descriptions', {})
+    
+    problem_info_list = [
+        {
+            "problem_id": pid,
+            "problem_text": problem_descriptions.get(str(pid))
+        }
+        for pid in problem_map.keys()
+    ]
+    
+    return sorted(problem_info_list, key=lambda x: x['problem_id'])
 
 @app.post("/api/predict", response_model=List[PredictionResponse], tags=["核心功能"])
 def predict_correctness(requests: List[PredictionRequest]):

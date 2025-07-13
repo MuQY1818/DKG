@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DKG 交互式预测</title>
+    <link rel="stylesheet" href="/frontend/style.css">
+</head><body>
+    <div class="container">
+        <h1>DKG 交互式预测</h1>
+        <p>选择一个学生和一道练习题，来预测该学生答对题目的概率。</p>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label for="student-select">选择学生:</label>
+                <select id="student-select" class="styled-select">
+                    <option value="">加载中...</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label for="problem-select">选择练习:</label>
+                <select id="problem-select" class="styled-select">
+                    <option value="">加载中...</option>
+                </select>
+            </div>
+            
+            <button id="predict-btn">预测答对概率</button>
+        </div>
+        
+        <div id="result-container" class="result-container hidden">
+            <h2>预测结果</h2>
+            <p id="result-text"></p>
+        </div>
+
+        <div id="error-container" class="error-container hidden">
+            <p id="error-text"></p>
+        </div>
+    </div>
+    
+    <script src="/frontend/script.js"></script>
+</body>
+</html> 
